@@ -89,3 +89,119 @@ export interface ValidationResult {
     eligibleCount: number;
   };
 }
+
+// Call Sheet types
+export type CallSheetBucket =
+  | 'opening_script'
+  | 'first_and_ten'
+  | 'second_short'
+  | 'second_medium'
+  | 'second_long'
+  | 'third_short'
+  | 'third_medium'
+  | 'third_long'
+  | 'fourth_short'
+  | 'red_zone'
+  | 'backed_up'
+  | 'two_minute'
+  | 'four_minute'
+  | 'shot_plays'
+  | 'zero_answers'
+  | 'favorites'
+  | 'gimmicks'
+  | 'notes';
+
+export interface CallSheetPlay {
+  playId: string;
+  playName: string;
+  concept: string;
+  formation?: string;
+  personnel?: string;
+  tags?: string[];
+  situations?: string[];
+  preferredLook?: string[];
+  bestFor?: string[];
+  notes?: string[];
+  openerScore?: number;
+}
+
+export interface CallSheetSection {
+  bucket: CallSheetBucket;
+  label: string;
+  plays: CallSheetPlay[];
+  notes: string[];
+}
+
+export interface CallSheet {
+  weekLabel: string;
+  opponent?: string;
+  sections: CallSheetSection[];
+  summary: string[];
+}
+
+export interface CallSheetInputPlay {
+  id: string;
+  name: string;
+  concept: string;
+  formation?: string;
+  personnel?: string;
+  tags?: string[];
+  callReady?: boolean;
+  situations?: string[];
+  preferredLook?: string[];
+  bestFor?: string[];
+  notes?: string[];
+  explosive?: boolean;
+  pressureAnswer?: boolean;
+  openerScore?: number;
+  gimmick?: boolean;
+  favorite?: boolean;
+}
+
+export interface CallSheetInput {
+  weekLabel: string;
+  opponent?: string;
+  plays: CallSheetInputPlay[];
+}
+
+// Install & Practice types
+export interface InstallReport {
+  playId: string;
+  playName: string;
+  installDay: number;
+  installWeek: number;
+  ready: boolean;
+  issues: string[];
+  coachingPoints: string[];
+}
+
+export interface PracticeScriptPeriod {
+  periodType: 'indy' | 'group' | '7on7' | 'team' | 'special_teams';
+  plays: string[];
+  focus: string;
+  durationMinutes: number;
+}
+
+export interface PracticeScript {
+  weekLabel: string;
+  practiceDay: string;
+  focusArea: string;
+  periods: PracticeScriptPeriod[];
+  notes: string[];
+}
+
+// Weekly Game Plan
+export interface WeeklyGamePlan {
+  week: string;
+  opponent: string;
+  scouting: {
+    baseFronts: string[];
+    baseCoverages: string[];
+    pressureNotes: string[];
+    matchupNotes: string[];
+  };
+  install: InstallReport[];
+  practice: PracticeScript;
+  callSheet: CallSheet;
+  priorities: string[];
+}
