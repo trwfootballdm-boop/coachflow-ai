@@ -1,0 +1,121 @@
+{
+  "name": "Staff",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Reference to User account"
+    },
+    "full_name": {
+      "type": "string",
+      "description": "Coach's full name"
+    },
+    "email": {
+      "type": "string",
+      "description": "Coach's email address"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "head_coach",
+        "offensive_coordinator",
+        "defensive_coordinator",
+        "special_teams_coordinator",
+        "position_coach",
+        "analyst",
+        "graduate_assistant"
+      ],
+      "description": "Coaching role"
+    },
+    "position_group": {
+      "type": "string",
+      "description": "Position group if applicable (e.g., QBs, WRs, LBs)"
+    },
+    "side_of_ball": {
+      "type": "string",
+      "enum": [
+        "offense",
+        "defense",
+        "special_teams",
+        "all"
+      ],
+      "default": "all"
+    },
+    "permissions": {
+      "type": "object",
+      "description": "Granular permissions",
+      "properties": {
+        "can_create_plays": {
+          "type": "boolean",
+          "default": true
+        },
+        "can_edit_plays": {
+          "type": "boolean",
+          "default": true
+        },
+        "can_delete_plays": {
+          "type": "boolean",
+          "default": false
+        },
+        "can_approve_plays": {
+          "type": "boolean",
+          "default": false
+        },
+        "can_create_scripts": {
+          "type": "boolean",
+          "default": true
+        },
+        "can_edit_scripts": {
+          "type": "boolean",
+          "default": true
+        },
+        "can_approve_scripts": {
+          "type": "boolean",
+          "default": false
+        },
+        "can_create_game_plans": {
+          "type": "boolean",
+          "default": true
+        },
+        "can_edit_game_plans": {
+          "type": "boolean",
+          "default": true
+        },
+        "can_approve_game_plans": {
+          "type": "boolean",
+          "default": false
+        },
+        "can_invite_staff": {
+          "type": "boolean",
+          "default": false
+        },
+        "is_admin": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "joined_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "team_id",
+    "user_id",
+    "full_name",
+    "email",
+    "role"
+  ]
+}

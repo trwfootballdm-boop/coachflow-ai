@@ -1,0 +1,116 @@
+{
+  "name": "CollaborationComment",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "parent_type": {
+      "type": "string",
+      "enum": [
+        "play",
+        "practice_script",
+        "game_plan",
+        "scout_card",
+        "weekly_plan"
+      ],
+      "description": "Type of parent entity"
+    },
+    "parent_id": {
+      "type": "string",
+      "description": "ID of parent entity (play_id, script_id, etc.)"
+    },
+    "author_user_id": {
+      "type": "string",
+      "description": "User who wrote the comment"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Author's display name"
+    },
+    "author_role": {
+      "type": "string",
+      "description": "Author's coaching role"
+    },
+    "content": {
+      "type": "string",
+      "description": "Comment text"
+    },
+    "comment_type": {
+      "type": "string",
+      "enum": [
+        "general",
+        "suggestion",
+        "question",
+        "approval",
+        "revision_request"
+      ],
+      "default": "general"
+    },
+    "parent_comment_id": {
+      "type": "string",
+      "description": "If reply, reference to parent comment"
+    },
+    "is_edited": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_resolved": {
+      "type": "boolean",
+      "default": false
+    },
+    "resolved_by": {
+      "type": "string",
+      "description": "User who resolved the comment"
+    },
+    "resolved_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "mentioned_user_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Users mentioned in comment"
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "file_url": {
+            "type": "string"
+          },
+          "file_name": {
+            "type": "string"
+          },
+          "file_type": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "created_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "team_id",
+    "parent_type",
+    "parent_id",
+    "author_user_id",
+    "author_name",
+    "content"
+  ]
+}

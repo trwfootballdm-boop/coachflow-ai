@@ -326,6 +326,9 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'AI returned unparseable data. Please try again.' }, { status: 500 });
     }
 
+    console.log('LLM result keys:', JSON.stringify(Object.keys(result || {})));
+    console.log('LLM result snippet:', JSON.stringify(result).slice(0, 600));
+
     // Normalize: some models wrap differently
     if (result?.play && !result?.play_meta) {
       result.play_meta = result.play;

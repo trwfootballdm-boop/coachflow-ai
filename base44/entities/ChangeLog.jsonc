@@ -1,0 +1,105 @@
+{
+  "name": "ChangeLog",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "entity_type": {
+      "type": "string",
+      "enum": [
+        "play",
+        "practice_script",
+        "game_plan",
+        "scout_card",
+        "weekly_plan",
+        "formation",
+        "library_item"
+      ]
+    },
+    "entity_id": {
+      "type": "string",
+      "description": "ID of changed entity"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User who made the change"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "User's display name"
+    },
+    "user_role": {
+      "type": "string",
+      "description": "User's coaching role"
+    },
+    "change_type": {
+      "type": "string",
+      "enum": [
+        "create",
+        "update",
+        "delete",
+        "status_change",
+        "approval_change"
+      ]
+    },
+    "changed_fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "field_name": {
+            "type": "string"
+          },
+          "old_value": {
+            "type": "string"
+          },
+          "new_value": {
+            "type": "string"
+          },
+          "field_label": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "change_summary": {
+      "type": "string",
+      "description": "Human-readable summary of change"
+    },
+    "previous_version_snapshot": {
+      "type": "object",
+      "description": "Snapshot of entity before change"
+    },
+    "new_version_snapshot": {
+      "type": "object",
+      "description": "Snapshot of entity after change"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "is_major_change": {
+      "type": "boolean",
+      "default": false
+    },
+    "related_comment_id": {
+      "type": "string",
+      "description": "Related comment if applicable"
+    },
+    "related_approval_id": {
+      "type": "string",
+      "description": "Related approval workflow if applicable"
+    }
+  },
+  "required": [
+    "team_id",
+    "entity_type",
+    "entity_id",
+    "user_id",
+    "user_name",
+    "change_type",
+    "timestamp"
+  ]
+}

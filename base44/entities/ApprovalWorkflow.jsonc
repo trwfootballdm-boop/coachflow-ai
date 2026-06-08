@@ -1,0 +1,115 @@
+{
+  "name": "ApprovalWorkflow",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "parent_type": {
+      "type": "string",
+      "enum": [
+        "play",
+        "practice_script",
+        "game_plan",
+        "scout_card",
+        "weekly_plan"
+      ],
+      "description": "Type of entity being approved"
+    },
+    "parent_id": {
+      "type": "string",
+      "description": "ID of entity being approved"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "pending_review",
+        "approved",
+        "revision_requested",
+        "rejected"
+      ],
+      "default": "draft"
+    },
+    "submitted_by": {
+      "type": "string",
+      "description": "User who submitted for approval"
+    },
+    "submitted_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "User who approved"
+    },
+    "approved_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "revision_requested_by": {
+      "type": "string",
+      "description": "User who requested revision"
+    },
+    "revision_notes": {
+      "type": "string",
+      "description": "Notes about required revisions"
+    },
+    "version_number": {
+      "type": "integer",
+      "default": 1
+    },
+    "previous_version_id": {
+      "type": "string",
+      "description": "Reference to previous version"
+    },
+    "change_summary": {
+      "type": "string",
+      "description": "Summary of changes from previous version"
+    },
+    "approval_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "submitted",
+              "approved",
+              "revision_requested",
+              "rejected"
+            ]
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "user_name": {
+            "type": "string"
+          },
+          "user_role": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "team_id",
+    "parent_type",
+    "parent_id",
+    "status"
+  ]
+}

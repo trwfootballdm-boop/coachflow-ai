@@ -21,6 +21,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import Dashboard from '@/pages/Dashboard';
 import PlayDesigner from '@/pages/PlayDesigner';
 import PlayLibrary from '@/pages/PlayLibrary';
+import PlayLibraryBrowser from '@/pages/PlayLibraryBrowser';
 import GamePlanning from '@/pages/GamePlanning';
 import PracticeScripts from '@/pages/PracticeScripts';
 import ScoutCards from '@/pages/ScoutCards';
@@ -30,7 +31,6 @@ import Scouting from '@/pages/Scouting';
 import Roster from '@/pages/Roster';
 import Terminology from '@/pages/Terminology';
 import Settings from '@/pages/Settings';
-import WeeklyInstallPlanner from '@/pages/WeeklyInstallPlanner';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -70,6 +70,7 @@ const AuthenticatedApp = () => {
             <Route path="/" element={<Dashboard />} />
             <Route path="/play-designer" element={<PlayDesigner />} />
             <Route path="/play-library" element={<PlayLibrary />} />
+            <Route path="/library-browser" element={<PlayLibraryBrowser />} />
             <Route path="/game-planning" element={<GamePlanning />} />
             <Route path="/practice-scripts" element={<PracticeScripts />} />
             <Route path="/scout-cards" element={<ScoutCards />} />
@@ -79,7 +80,6 @@ const AuthenticatedApp = () => {
             <Route path="/roster" element={<Roster />} />
             <Route path="/terminology" element={<Terminology />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/weekly-install" element={<WeeklyInstallPlanner />} />
           </Route>
         </Route>
 
