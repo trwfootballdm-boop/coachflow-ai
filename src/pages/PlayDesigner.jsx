@@ -6,12 +6,12 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-import DesignerHeader        from '@/components/play-designer/DesignerHeader';
+import DesignerCommandBar    from '@/components/play-designer/DesignerCommandBar';
 import AIPlayCreatorPanel    from '@/components/ai-play/AIPlayCreatorPanel';
-import ToolPalette       from '@/components/play-designer/ToolPalette';
-import DesignerCanvas    from '@/components/play-designer/DesignerCanvas';
-import RightInspector    from '@/components/play-designer/RightInspector';
-import DesignerStatusBar from '@/components/play-designer/DesignerStatusBar';
+import ToolRail              from '@/components/play-designer/ToolRail';
+import CanvasWorkspace       from '@/components/play-designer/CanvasWorkspace';
+import InspectorPanel        from '@/components/play-designer/InspectorPanel';
+import DesignerStatusBar     from '@/components/play-designer/DesignerStatusBar';
 
 // ─── Default play skeleton ─────────────────────────────────────────────────────
 const EMPTY_PLAY = {
@@ -283,9 +283,8 @@ export default function PlayDesigner() {
   }
 
   return (
-    <div className="-m-6 flex flex-col bg-gray-900" style={{ height: 'calc(100vh - 0px)', overflow: 'hidden' }}>
-      {/* ── Top Header ── */}
-      <DesignerHeader
+    <div className="designer-shell">
+      <DesignerCommandBar
         play={play}
         isDirty={isDirty}
         isSaving={saveMutation.isPending}
@@ -300,74 +299,32 @@ export default function PlayDesigner() {
         onAICreate={() => setAiPanelOpen(true)}
       />
 
-      {/* AI Play Creator slide-in panel */}
-      <AIPlayCreatorPanel
-        isOpen={aiPanelOpen}
-        onClose={() => setAiPanelOpen(false)}
-      />
-
-      {/* ── Main editor row ── */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left tool palette */}
-        <ToolPalette
+      <div className="designer-body">
+        <ToolRail
           activeTool={activeTool}
           onSelectTool={setActiveTool}
           onUndo={diagram.undo}
           onRedo={diagram.redo}
         />
 
-        {/* Central canvas */}
-        <div className="flex-1 bg-gray-800 overflow-hidden flex flex-col">
-          {/* Field scope / view options bar */}
-          <div className="h-8 bg-gray-900 border-b border-gray-800 flex items-center px-3 gap-3 shrink-0">
-            <span className="text-[10px] text-gray-500 font-mono uppercase tracking-wider">Half Field</span>
-            <div className="flex gap-1">
-              {['Half Field', 'Red Zone', 'Goal Line', 'Full Field'].map(view => (
-                <button key={view}
-                  className="text-[9px] px-1.5 py-0.5 rounded text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors font-medium">
-                  {view}
-                </button>
-              ))}
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              <span className="text-[9px] text-gray-600 font-mono">
-                {diag.players.length}p · {diag.paths.length} paths
-              </span>
-              {(diagram.canUndo || diagram.canRedo) && (
-                <div className="flex gap-1">
-                  <button disabled={!diagram.canUndo} onClick={diagram.undo}
-                    className="text-[9px] px-1.5 py-0.5 rounded disabled:opacity-30 text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors font-mono">
-                    ⌘Z
-                  </button>
-                  <button disabled={!diagram.canRedo} onClick={diagram.redo}
-                    className="text-[9px] px-1.5 py-0.5 rounded disabled:opacity-30 text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors font-mono">
-                    ⌘Y
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+        <CanvasWorkspace
+          players={diag.players}
+          paths={diag.paths}
+          annotations={diag.annotations}
+          selectedPlayerId={selectedPlayerId}
+          selectedPathId={selectedPathId}
+          activeTool={activeTool}
+          onSelectPlayer={(id) => { setSelectedPlayerId(id); setSelectedPathId(null); }}
+          onSelectPath={(id) => { setSelectedPathId(id); setSelectedPlayerId(null); }}
+          onMovePlayer={movePlayer}
+          onAddPlayer={addPlayer}
+          onCommitPath={commitPath}
+          onDrawingChange={setDrawingPts}
+          diag={diag}
+          diagram={diagram}
+        />
 
-          <div className="flex-1 overflow-hidden">
-            <DesignerCanvas
-              players={diag.players}
-              paths={diag.paths}
-              annotations={diag.annotations}
-              selectedPlayerId={selectedPlayerId}
-              selectedPathId={selectedPathId}
-              activeTool={activeTool}
-              onSelectPlayer={(id) => { setSelectedPlayerId(id); setSelectedPathId(null); }}
-              onSelectPath={(id) => { setSelectedPathId(id); setSelectedPlayerId(null); }}
-              onMovePlayer={movePlayer}
-              onAddPlayer={addPlayer}
-              onCommitPath={commitPath}
-              onDrawingChange={setDrawingPts}
-            />
-          </div>
-        </div>
-
-        {/* Right inspector */}
-        <RightInspector
+        <InspectorPanel
           play={play}
           onPlayChange={setPlay}
           selectedPlayer={selectedPlayer}
@@ -380,7 +337,6 @@ export default function PlayDesigner() {
         />
       </div>
 
-      {/* ── Bottom status bar ── */}
       <DesignerStatusBar
         activeTool={activeTool}
         playerCount={diag.players.length}
