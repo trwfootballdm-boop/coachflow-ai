@@ -18,51 +18,44 @@ export default function CanvasWorkspace({
   diagram,
 }) {
   return (
-    <div className="flex-1 bg-gray-800 overflow-hidden flex flex-col">
-      <div className="h-8 bg-gray-900 border-b border-gray-800 flex items-center px-3 gap-3 shrink-0">
-        <span className="text-[10px] text-gray-500 font-mono uppercase tracking-wider">Half Field</span>
-        <div className="flex gap-1">
-          {['Half Field', 'Red Zone', 'Goal Line', 'Full Field'].map(view => (
-            <button key={view}
-              className="text-[9px] px-1.5 py-0.5 rounded text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors font-medium">
-              {view}
-            </button>
-          ))}
+    <div className="relative h-full w-full bg-background">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_45%)]" />
+
+      <div className="absolute left-4 top-4 z-10 flex items-center gap-2">
+        <div className="rounded-full border border-border bg-card/80 px-3 py-1.5 text-[11px] font-semibold text-foreground backdrop-blur">
+          Route tool
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <span className="text-[9px] text-gray-600 font-mono">
-            {players?.length || 0}p · {paths?.length || 0} paths
-          </span>
-          {(diagram?.canUndo || diagram?.canRedo) && (
-            <div className="flex gap-1">
-              <button disabled={!diagram.canUndo} onClick={diagram.undo}
-                className="text-[9px] px-1.5 py-0.5 rounded disabled:opacity-30 text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors font-mono">
-                ⌘Z
-              </button>
-              <button disabled={!diagram.canRedo} onClick={diagram.redo}
-                className="text-[9px] px-1.5 py-0.5 rounded disabled:opacity-30 text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors font-mono">
-                ⌘Y
-              </button>
-            </div>
-          )}
+        <div className="rounded-full border border-border bg-card/70 px-3 py-1.5 text-[11px] text-muted-foreground backdrop-blur">
+          Click to add points · Double-click to finish
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden">
-        <DesignerCanvas
-          players={players}
-          paths={paths}
-          annotations={annotations}
-          selectedPlayerId={selectedPlayerId}
-          selectedPathId={selectedPathId}
-          activeTool={activeTool}
-          onSelectPlayer={onSelectPlayer}
-          onSelectPath={onSelectPath}
-          onMovePlayer={onMovePlayer}
-          onAddPlayer={onAddPlayer}
-          onCommitPath={onCommitPath}
-          onDrawingChange={onDrawingChange}
-        />
+      <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+        <button className="rounded-full border border-border bg-card/70 px-3 py-1.5 text-[11px] font-medium text-foreground backdrop-blur hover:bg-card/90 transition-colors">
+          Half Field
+        </button>
+        <button className="rounded-full border border-border bg-card/70 px-3 py-1.5 text-[11px] font-medium text-foreground backdrop-blur hover:bg-card/90 transition-colors">
+          100%
+        </button>
+      </div>
+
+      <div className="flex h-full items-center justify-center p-6">
+        <div className="relative aspect-[5/3] w-full max-w-[1200px] overflow-hidden rounded-[24px] border border-border bg-card shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+          <DesignerCanvas
+            players={players}
+            paths={paths}
+            annotations={annotations}
+            selectedPlayerId={selectedPlayerId}
+            selectedPathId={selectedPathId}
+            activeTool={activeTool}
+            onSelectPlayer={onSelectPlayer}
+            onSelectPath={onSelectPath}
+            onMovePlayer={onMovePlayer}
+            onAddPlayer={onAddPlayer}
+            onCommitPath={onCommitPath}
+            onDrawingChange={onDrawingChange}
+          />
+        </div>
       </div>
     </div>
   );
