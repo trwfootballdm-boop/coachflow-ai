@@ -1,6 +1,6 @@
 // src/lib/football-engine/concepts.ts
 
-import type { PathPoint, PlayPath } from './types';
+import type { PathPoint, PlayPath, PlayerToken } from './types';
 
 export interface PathAssignment {
   pathId: string;
@@ -8,6 +8,20 @@ export interface PathAssignment {
   kind: 'route' | 'run' | 'block' | 'motion' | 'unknown';
   family: 'vertical' | 'flat' | 'slant' | 'corner' | 'dig' | 'drag' | 'pull' | 'base' | 'unknown';
   confidence: number;
+}
+
+export interface ConceptMatch {
+  concept: string;
+  confidence: number;
+  pathIds: string[];
+  playerIds: string[];
+  why: string[];
+}
+
+export interface ConceptAnalysisResult {
+  assignments: PathAssignment[];
+  concepts: ConceptMatch[];
+  notes: string[];
 }
 
 function dx(a: PathPoint, b: PathPoint) {
@@ -94,4 +108,145 @@ export function inferRouteFamily(path: PlayPath): PathAssignment {
   }
 
   return { pathId: path.path_id, tokenId: path.token_id, kind: 'route', family: 'unknown', confidence: 0.35 };
+}
+
+function sameSide(player?: PlayerToken) {
+  if (!player) return 'middle';
+  if (player.x < 450) return 'left';
+  if (player.x > 450) return 'right';
+  return 'middle';
+}
+
+function findPlayer(players: PlayerToken[], tokenId?: string) {
+  return players.find((p) => p.token_id === tokenId);
+}
+
+function detectStick(assignments: PathAssignment[], players: PlayerToken[]): ConceptMatch | null {
+  const routes = assignments.filter((a) => a.kind === 'route');
+  const flats = routes.filter((r) => r.family === 'flat');
+  const sticks = routes.filter((r) => ['curl', 'out', 'unknown'].includes(String(r.family)));
+
+  for (const flat of flats) {
+    const flatPlayer = findPlayer(players, flat.tokenId);
+    const flatSide = sameSide(flatPlayer);
+
+    const partner = sticks.find((r) => {
+      const p = findPlayer(players, r.tokenId);
+      return sameSide(p) === flatSide && r.pathId !== flat.pathId;
+    });
+
+    if (partner) {
+      return {
+        concept: 'stick',
+        confidence: 0.58,
+        pathIds: [flat.pathId, partner.pathId],
+        playerIds: [flat.tokenId, partner.tokenId].filter(Boolean) as string[],
+        why: ['Flat route paired with short settle/option route on same side.'],
+      };
+    }
+  }
+
+  return null;
+}
+
+function detectShallowCross(assignments: PathAssignment[], players: PlayerToken[]): ConceptMatch | null {
+  const drags = assignments.filter((a) => a.kind === 'route' && (a.family === 'drag' || a.family === 'shallow_cross'));
+  const digs = assignments.filter((a) => a.kind === 'route' && a.family === 'dig');
+
+  for (const drag of drags) {
+    const dragPlayer = findPlayer(players, drag.tokenId);
+    const dragSide = sameSide(dragPlayer);
+
+    const basic = digs.find((d) => {
+      const p = findPlayer(players, d.tokenId);
+      return sameSide(p) !== dragSide;
+    });
+
+    if (basic) {
+      return {
+        concept: 'shallow_cross',
+        confidence: 0.72,
+        pathIds: [drag.pathId, basic.pathId],
+        playerIds: [drag.tokenId, basic.tokenId].filter(Boolean) as string[],
+        why: ['Drag paired with intermediate basic/dig from opposite side creates classic shallow structure.'],
+      };
+    }
+  }
+
+  return null;
+}
+
+function detectMesh(assignments: PathAssignment[], players: PlayerToken[]): ConceptMatch | null {
+  const drags = assignments.filter((a) => a.kind === 'route' && a.family === 'drag');
+
+  if (drags.length >= 2) {
+    return {
+      concept: 'mesh',
+      confidence: 0.63,
+      pathIds: drags.slice(0, 2).map((d) => d.pathId),
+      playerIds: drags.slice(0, 2).map((d) => d.tokenId).filter(Boolean) as string[],
+      why: ['Two shallow crossers suggest a mesh-style concept.'],
+    };
+  }
+
+  return null;
+}
+
+function detectInsideZone(assignments: PathAssignment[], paths: PlayPath[]): ConceptMatch | null {
+  const runs = assignments.filter((a) => a.kind === 'run');
+  const pulls = assignments.filter((a) => a.kind === 'block' && a.family === 'pull');
+
+  if (runs.length >= 1 && pulls.length === 0) {
+    return {
+      concept: 'inside_zone',
+      confidence: 0.6,
+      pathIds: runs.map((r) => r.pathId),
+      playerIds: runs.map((r) => r.tokenId).filter(Boolean) as string[],
+      why: ['Run track with no puller suggests zone structure, likely inside zone by default.'],
+    };
+  }
+
+  return null;
+}
+
+function detectPower(assignments: PathAssignment[]): ConceptMatch | null {
+  const runs = assignments.filter((a) => a.kind === 'run');
+  const pulls = assignments.filter((a) => a.kind === 'block' && a.family === 'pull');
+
+  if (runs.length >= 1 && pulls.length >= 1) {
+    return {
+      concept: 'power',
+      confidence: 0.73,
+      pathIds: [...runs.map((r) => r.pathId), ...pulls.map((p) => p.pathId)],
+      playerIds: [...runs.map((r) => r.tokenId), ...pulls.map((p) => p.tokenId)].filter(Boolean) as string[],
+      why: ['Run path plus puller strongly suggests gap scheme, likely power.'],
+    };
+  }
+
+  return null;
+}
+
+export function analyzeConcepts(diagram: PlayDiagram): ConceptAnalysisResult {
+  const assignments = diagram.paths.map(inferRouteFamily);
+  const concepts = [
+    detectStick(assignments, diagram.players),
+    detectShallowCross(assignments, diagram.players),
+    detectMesh(assignments, diagram.players),
+    detectInsideZone(assignments, diagram.paths),
+    detectPower(assignments),
+  ].filter(Boolean) as ConceptMatch[];
+
+  return {
+    assignments,
+    concepts: concepts.length ? concepts : [{
+      concept: 'unknown',
+      confidence: 0.2,
+      pathIds: [],
+      playerIds: [],
+      why: ['No strong concept match yet.'],
+    }],
+    notes: concepts.length
+      ? []
+      : ['Concept detection is heuristic in milestone 2 and should be refined with explicit tags later.'],
+  };
 }
