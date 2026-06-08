@@ -16,6 +16,8 @@ import { validateOffensivePlay } from '@/lib/football-engine/validation';
 import { analyzeConcepts } from '@/lib/football-engine/concepts';
 import { analyzeDefensiveReaction } from '@/lib/football-engine/reactions';
 import { analyzeTiming } from '@/lib/football-engine/timing';
+import { analyzeAdjustments } from '@/lib/football-engine/adjustments';
+import { buildInstallReport } from '@/lib/football-engine/install';
 
 // ─── Default play skeleton ─────────────────────────────────────────────────────
 const EMPTY_PLAY = {
@@ -278,7 +280,7 @@ export default function PlayDesigner() {
   const selectedPath   = diag.paths.find(p => p.path_id === selectedPathId)     || null;
   const selectedType   = selectedPlayer ? 'player' : selectedPath ? 'path' : null;
 
-  // ── Analysis Pipeline (ordered: validation → concepts → reaction → timing) ──
+  // ── Analysis Pipeline (ordered: validation → concepts → reaction → timing → adjustments → install) ──
   const validation = useMemo(() => {
     if (play.side !== 'offense') return null;
     return validateOffensivePlay(diag);
@@ -308,6 +310,33 @@ export default function PlayDesigner() {
       middleField: 'closed',
     });
   }, [diag, concepts]);
+
+  const adjustments = useMemo(() => {
+    if (!concepts || !timing) return null;
+    return analyzeAdjustments(diag, concepts, timing, {
+      coverageShell: 'cover_3',
+      frontFamily: 'even',
+      pressure: '5man',
+      middleField: 'closed',
+    });
+  }, [diag, concepts, timing]);
+
+  const install = useMemo(() => {
+    if (!concepts || !timing || !adjustments) return null;
+    return buildInstallReport({
+      diagram: diag,
+      play,
+      concepts,
+      timing,
+      adjustments,
+      scenario: {
+        coverageShell: 'cover_3',
+        frontFamily: 'even',
+        pressure: '5man',
+        middleField: 'closed',
+      },
+    });
+  }, [diag, play, concepts, timing, adjustments]);
 
   if (loading) {
     return (
