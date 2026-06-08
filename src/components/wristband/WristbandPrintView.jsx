@@ -3,75 +3,122 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Printer, X, Copy } from "lucide-react";
+import { Printer, X, Scissors } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const COLS_OPTIONS = [
-  { value: '2', label: '2 cols', cols: 2 },
-  { value: '3', label: '3 cols', cols: 3 },
-  { value: '4', label: '4 cols', cols: 4 },
+const FONT_SIZES = [
+  { value: 'xs',  label: 'XS — Youth/Mini', base: 7 },
+  { value: 'sm',  label: 'Small — Standard', base: 9 },
+  { value: 'md',  label: 'Medium — Clear',   base: 11 },
+  { value: 'lg',  label: 'Large — Bold',     base: 13 },
 ];
 
-const COPIES_OPTIONS = ['1', '2', '3', '4', '5', '6'];
+export default function WristbandPrintView({ title, sections, sectionPlays, playMap, template, repeats, onClose }) {
+  const [copies, setCopies] = useState(repeats || 2);
+  const [fontSz, setFontSz] = useState('sm');
+  const [showCutLines, setShowCutLines] = useState(true);
+  const [showCodes, setShowCodes] = useState(true);
+  const [showFormation, setShowFormation] = useState(false);
+  const [boldNames, setBoldNames] = useState(true);
+  const [layout, setLayout] = useState(template?.value || 'standard');
 
-// Single wristband insert card
-function WristbandInsert({ title, teamName, opponentName, sections, playMap, showCodes, showFullName, showRunPass, sideLabel, fontSize }) {
-  const fontClass = fontSize === 'lg' ? 'text-[11px]' : fontSize === 'sm' ? 'text-[8px]' : 'text-[9px]';
-  const headerFont = fontSize === 'lg' ? 'text-[10px]' : 'text-[8px]';
+  const fontSize = FONT_SIZES.find(f => f.value === fontSz)?.base || 9;
 
-  return (
+  // Build one insert
+  const renderInsert = (insertKey) => (
     <div
-      className="bg-white border border-gray-400 rounded overflow-hidden"
-      style={{ pageBreakInside: 'avoid', breakInside: 'avoid', minHeight: '200px' }}
+      key={insertKey}
+      className="bg-white text-black overflow-hidden"
+      style={{
+        border: showCutLines ? '1px dashed #999' : '1px solid #ccc',
+        borderRadius: '4px',
+        width: layout === 'wide' ? '3.5in' : layout === 'mini' ? '2.5in' : '3in',
+        minHeight: '4in',
+        pageBreakInside: 'avoid',
+        breakInside: 'avoid',
+        display: 'inline-block',
+        margin: '4px',
+        verticalAlign: 'top',
+      }}
     >
-      {/* Insert header */}
-      <div className="bg-gray-900 text-white px-2 py-1 flex items-center justify-between">
-        <div>
-          <p className={cn("font-bold leading-tight", fontSize === 'lg' ? 'text-[11px]' : 'text-[9px]')}>{title}</p>
-          {(teamName || opponentName) && (
-            <p className={cn("text-gray-400 leading-none", headerFont)}>
-              {teamName}{opponentName ? ` vs ${opponentName}` : ''}
-            </p>
-          )}
-        </div>
-        <span className={cn("text-gray-500 font-bold uppercase tracking-widest", headerFont)}>{sideLabel}</span>
+      {/* Header */}
+      <div style={{ background: '#111', color: '#fff', padding: '3px 6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: fontSize + 1, fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          {title}
+        </span>
+        {showCutLines && <Scissors style={{ width: 8, height: 8, opacity: 0.4 }} />}
       </div>
 
       {/* Sections */}
-      <div className="p-1">
-        {sections.map(section => {
-          const plays = section.plays.filter(e => playMap[e.play_id]);
-          if (plays.length === 0) return null;
+      <div style={{ padding: '3px 4px' }}>
+        {sections.map(sec => {
+          const entries = sectionPlays[sec.id] || [];
+          if (!entries.length) return null;
           return (
-            <div key={section.id} className="mb-1">
-              {/* Section label */}
-              <div className="bg-gray-100 px-1.5 py-0.5 border-b border-gray-200">
-                <p className={cn("font-bold uppercase tracking-wider text-gray-700", headerFont)}>
-                  {section.label}
-                </p>
+            <div key={sec.id} style={{ marginBottom: 3 }}>
+              {/* Section header */}
+              <div style={{
+                fontSize: fontSize - 1,
+                fontWeight: 900,
+                textTransform: 'uppercase',
+                letterSpacing: '0.12em',
+                color: sec.color,
+                borderBottom: `1px solid ${sec.color}30`,
+                paddingBottom: 1,
+                marginBottom: 1,
+              }}>
+                {sec.label}
               </div>
-              {/* Plays */}
-              <div className="divide-y divide-gray-100">
-                {plays.map(entry => {
+              {/* Play entries */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: layout === 'wide' || layout === 'mini' ? '1fr 1fr 1fr' : '1fr 1fr',
+                gap: '0 6px',
+              }}>
+                {entries.map((entry, i) => {
                   const play = playMap[entry.play_id];
+                  const name = play?.short_name || play?.name || play?.play_name || '—';
+                  const formation = play?.formation;
                   return (
-                    <div key={entry.play_id} className="flex items-baseline gap-1.5 px-1.5 py-0.5">
-                      {showCodes && entry.code && (
-                        <span className={cn("font-mono font-black text-gray-900 shrink-0 tabular-nums", fontClass)}>
-                          {entry.code}
+                    <div key={i} style={{
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      gap: 2,
+                      paddingTop: 1,
+                      paddingBottom: 1,
+                      borderBottom: '1px solid #f0f0f0',
+                    }}>
+                      {showCodes && (
+                        <span style={{
+                          fontSize: fontSize - 1,
+                          fontWeight: 900,
+                          color: '#555',
+                          minWidth: 14,
+                          textAlign: 'right',
+                          flexShrink: 0,
+                          fontFamily: 'monospace',
+                        }}>
+                          {entry.code ?? i + 1}
                         </span>
                       )}
-                      {showCodes && entry.code && <span className={cn("text-gray-300 shrink-0", fontClass)}>—</span>}
-                      <span className={cn("font-semibold text-gray-900 truncate flex-1", fontClass)}>
-                        {showFullName
-                          ? (play.name || play.play_name || '—')
-                          : (play.short_name || play.name || play.play_name || '—')}
-                      </span>
-                      {showRunPass && play.run_pass && (
-                        <span className={cn("text-gray-400 shrink-0 font-medium", headerFont)}>
-                          {play.run_pass === 'run' ? 'R' : play.run_pass === 'pass' ? 'P' : 'S'}
+                      <div style={{ overflow: 'hidden' }}>
+                        <span style={{
+                          fontSize,
+                          fontWeight: boldNames ? 700 : 400,
+                          display: 'block',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: layout === 'mini' ? 60 : layout === 'wide' ? 80 : 100,
+                        }}>
+                          {name}
                         </span>
-                      )}
+                        {showFormation && formation && (
+                          <span style={{ fontSize: fontSize - 2, color: '#888', display: 'block', lineHeight: 1 }}>
+                            {formation}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -80,26 +127,18 @@ function WristbandInsert({ title, teamName, opponentName, sections, playMap, sho
           );
         })}
       </div>
+
+      {/* Footer */}
+      <div style={{ borderTop: '1px solid #eee', padding: '2px 5px', display: 'flex', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: fontSize - 2, color: '#aaa' }}>
+          {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+        </span>
+        <span style={{ fontSize: fontSize - 2, color: '#aaa' }}>
+          {Object.values(sectionPlays).flat().length} plays
+        </span>
+      </div>
     </div>
   );
-}
-
-export default function WristbandPrintView({
-  title, teamName, opponentName, sideOfBall, sections, playMap, onClose
-}) {
-  const [cols, setCols] = useState('3');
-  const [copies, setCopies] = useState('1');
-  const [showCodes, setShowCodes] = useState(true);
-  const [showFullName, setShowFullName] = useState(false);
-  const [showRunPass, setShowRunPass] = useState(true);
-  const [showCutLines, setShowCutLines] = useState(true);
-  const [fontSize, setFontSize] = useState('md'); // sm | md | lg
-
-  const numCols = parseInt(cols, 10);
-  const numCopies = parseInt(copies, 10);
-  const sideLabel = sideOfBall === 'special_teams' ? 'ST' : sideOfBall?.toUpperCase().slice(0, 3) || 'OFF';
-
-  const totalPlays = sections.reduce((acc, s) => acc + s.plays.length, 0);
 
   return (
     <div className="fixed inset-0 bg-gray-100 z-50 flex flex-col">
@@ -111,45 +150,39 @@ export default function WristbandPrintView({
         <div className="h-5 w-px bg-border shrink-0" />
 
         {/* Layout */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-[11px] text-muted-foreground font-medium">Columns</span>
-          <div className="flex items-center bg-secondary rounded-md p-0.5">
-            {COLS_OPTIONS.map(opt => (
-              <button key={opt.value} onClick={() => setCols(opt.value)}
-                className={cn("px-2 py-0.5 text-[11px] font-bold rounded transition-all",
-                  cols === opt.value ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
-                )}>
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Copies */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-[11px] text-muted-foreground font-medium">Copies</span>
-          <div className="flex items-center bg-secondary rounded-md p-0.5">
-            {COPIES_OPTIONS.map(n => (
-              <button key={n} onClick={() => setCopies(n)}
-                className={cn("px-2 py-0.5 text-[11px] font-bold rounded transition-all",
-                  copies === n ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
-                )}>
-                ×{n}
-              </button>
-            ))}
-          </div>
-        </div>
+        <Select value={layout} onValueChange={setLayout}>
+          <SelectTrigger className="h-7 w-32 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[
+              { value: 'standard', label: 'Standard 2-col' },
+              { value: 'condensed', label: 'Condensed 2-col' },
+              { value: 'wide', label: 'Wide 3-col' },
+              { value: 'mini', label: 'Mini 3-col' },
+            ].map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
 
         {/* Font size */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-[11px] text-muted-foreground font-medium">Size</span>
+        <Select value={fontSz} onValueChange={setFontSz}>
+          <SelectTrigger className="h-7 w-36 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {FONT_SIZES.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+
+        {/* Copies */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-muted-foreground">Copies</span>
           <div className="flex items-center bg-secondary rounded-md p-0.5">
-            {[['sm', 'Small'], ['md', 'Med'], ['lg', 'Large']].map(([v, l]) => (
-              <button key={v} onClick={() => setFontSize(v)}
-                className={cn("px-2 py-0.5 text-[11px] font-bold rounded transition-all",
-                  fontSize === v ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
-                )}>
-                {l}
+            {[1,2,3,4,6,8].map(n => (
+              <button key={n} onClick={() => setCopies(n)}
+                className={cn("h-6 w-6 text-[10px] font-bold rounded transition-all",
+                  copies === n ? "bg-card shadow-sm text-foreground" : "text-muted-foreground")}>
+                {n}
               </button>
             ))}
           </div>
@@ -160,10 +193,10 @@ export default function WristbandPrintView({
         {/* Toggles */}
         <div className="flex items-center gap-3 flex-wrap">
           {[
-            { id: 'codes', label: 'Codes', val: showCodes, set: setShowCodes },
-            { id: 'fullname', label: 'Full Name', val: showFullName, set: setShowFullName },
-            { id: 'runpass', label: 'R/P', val: showRunPass, set: setShowRunPass },
-            { id: 'cutlines', label: 'Cut Lines', val: showCutLines, set: setShowCutLines },
+            { id: 'codes',     label: 'Codes',     val: showCodes,     set: setShowCodes },
+            { id: 'formation', label: 'Formation',  val: showFormation,  set: setShowFormation },
+            { id: 'bold',      label: 'Bold',       val: boldNames,      set: setBoldNames },
+            { id: 'cutlines',  label: 'Cut Lines',  val: showCutLines,   set: setShowCutLines },
           ].map(({ id, label, val, set }) => (
             <div key={id} className="flex items-center gap-1.5">
               <Switch id={id} checked={val} onCheckedChange={set} />
@@ -173,9 +206,7 @@ export default function WristbandPrintView({
         </div>
 
         <div className="ml-auto flex items-center gap-2 shrink-0">
-          <span className="text-xs text-muted-foreground">
-            {totalPlays} plays · ×{numCopies} copies
-          </span>
+          <span className="text-xs text-muted-foreground">{copies} inserts</span>
           <Button size="sm" className="gap-1.5" onClick={() => window.print()}>
             <Printer className="h-4 w-4" /> Print
           </Button>
@@ -183,37 +214,20 @@ export default function WristbandPrintView({
       </div>
 
       {/* Print area */}
-      <div className="flex-1 overflow-auto p-4 sm:p-6 bg-gray-100">
-        <div className="max-w-5xl mx-auto">
-          <div
-            className={cn(
-              "grid gap-3",
-              numCols === 2 ? "grid-cols-2" : numCols === 4 ? "grid-cols-4" : "grid-cols-3"
-            )}
-          >
-            {Array.from({ length: numCopies }).map((_, copyIdx) => (
-              <WristbandInsert
-                key={copyIdx}
-                title={title}
-                teamName={teamName}
-                opponentName={opponentName}
-                sections={sections}
-                playMap={playMap}
-                showCodes={showCodes}
-                showFullName={showFullName}
-                showRunPass={showRunPass}
-                sideLabel={sideLabel}
-                fontSize={fontSize}
-              />
-            ))}
-          </div>
+      <div className="flex-1 overflow-auto p-6 bg-gray-100">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-start' }}>
+          {Array.from({ length: copies }).map((_, i) => renderInsert(i))}
         </div>
+        {copies === 0 && (
+          <p className="text-center text-gray-400 mt-20">Set copies to 1 or more</p>
+        )}
       </div>
 
       <style>{`
         @media print {
           .no-print { display: none !important; }
           body { background: white !important; }
+          .bg-gray-100 { background: white !important; padding: 0 !important; }
         }
       `}</style>
     </div>
