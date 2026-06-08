@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTeam } from '@/components/TeamContext';
@@ -12,6 +12,7 @@ import ToolRail              from '@/components/play-designer/ToolRail';
 import CanvasWorkspace       from '@/components/play-designer/CanvasWorkspace';
 import InspectorPanel        from '@/components/play-designer/InspectorPanel';
 import DesignerStatusBar     from '@/components/play-designer/DesignerStatusBar';
+import { validateOffensivePlay } from '@/lib/football-engine/validation';
 
 // ─── Default play skeleton ─────────────────────────────────────────────────────
 const EMPTY_PLAY = {
@@ -273,6 +274,12 @@ export default function PlayDesigner() {
   const selectedPlayer = diag.players.find(p => p.token_id === selectedPlayerId) || null;
   const selectedPath   = diag.paths.find(p => p.path_id === selectedPathId)     || null;
   const selectedType   = selectedPlayer ? 'player' : selectedPath ? 'path' : null;
+
+  // ── Validation ──
+  const validation = useMemo(() => {
+    if (play.side !== 'offense') return null;
+    return validateOffensivePlay(diag);
+  }, [diag, play.side]);
 
   if (loading) {
     return (
