@@ -1,0 +1,314 @@
+{
+  "name": "WeeklyInstallPlan",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "game_plan_id": {
+      "type": "string",
+      "description": "Reference to GamePlan"
+    },
+    "opponent_id": {
+      "type": "string",
+      "description": "Reference to Opponent"
+    },
+    "week_number": {
+      "type": "integer",
+      "description": "Week number in season"
+    },
+    "game_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "side_of_ball": {
+      "type": "string",
+      "enum": [
+        "offense",
+        "defense",
+        "special_teams",
+        "all"
+      ],
+      "default": "all"
+    },
+    "ai_generated": {
+      "type": "boolean",
+      "default": false
+    },
+    "opponent_summary": {
+      "type": "object",
+      "description": "Structured opponent analysis",
+      "properties": {
+        "base_offense": {
+          "type": "string"
+        },
+        "base_defense": {
+          "type": "string"
+        },
+        "base_coverage": {
+          "type": "string"
+        },
+        "offensive_tendencies": {
+          "type": "string"
+        },
+        "defensive_tendencies": {
+          "type": "string"
+        },
+        "blitz_tendencies": {
+          "type": "string"
+        },
+        "strengths": {
+          "type": "string"
+        },
+        "weaknesses": {
+          "type": "string"
+        },
+        "red_zone_tendencies": {
+          "type": "string"
+        },
+        "third_down_tendencies": {
+          "type": "string"
+        },
+        "field_position_tendencies": {
+          "type": "string"
+        }
+      }
+    },
+    "team_readiness": {
+      "type": "object",
+      "description": "Current team readiness state",
+      "properties": {
+        "practiced_plays_count": {
+          "type": "integer"
+        },
+        "unpracticed_plays_count": {
+          "type": "integer"
+        },
+        "recent_install_count": {
+          "type": "integer"
+        },
+        "complexity_tolerance": {
+          "type": "string"
+        },
+        "age_level": {
+          "type": "string"
+        },
+        "readiness_gaps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "offense_plan": {
+      "type": "object",
+      "description": "Offensive game plan recommendations",
+      "properties": {
+        "core_plays": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Play IDs for core game plan"
+        },
+        "complementary_plays": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Play IDs for constraint/companion plays"
+        },
+        "openers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "First 6-8 scripted plays"
+        },
+        "red_zone_plan": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "short_yardage_plan": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "backed_up_plan": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "practice_emphasis": {
+          "type": "string"
+        },
+        "coaching_points": {
+          "type": "string"
+        }
+      }
+    },
+    "defense_plan": {
+      "type": "object",
+      "description": "Defensive game plan recommendations",
+      "properties": {
+        "base_fronts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pressure_packages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "coverage_plan": {
+          "type": "string"
+        },
+        "red_zone_defense": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "third_down_calls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "practice_emphasis": {
+          "type": "string"
+        },
+        "coaching_points": {
+          "type": "string"
+        }
+      }
+    },
+    "special_teams_plan": {
+      "type": "object",
+      "description": "Special teams plan",
+      "properties": {
+        "kickoff_focus": {
+          "type": "string"
+        },
+        "punt_strategy": {
+          "type": "string"
+        },
+        "return_emphasis": {
+          "type": "string"
+        },
+        "field_goal_prep": {
+          "type": "string"
+        }
+      }
+    },
+    "install_priorities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "priority_rank": {
+            "type": "integer"
+          },
+          "play_id": {
+            "type": "string"
+          },
+          "concept_name": {
+            "type": "string"
+          },
+          "situation": {
+            "type": "string"
+          },
+          "readiness_status": {
+            "type": "string"
+          },
+          "confidence_level": {
+            "type": "string"
+          },
+          "why_recommended": {
+            "type": "string"
+          },
+          "assumptions": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "readiness_warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Alerts about risky or unpracticed selections"
+    },
+    "scout_card_recommendations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "opponent_look": {
+            "type": "string"
+          },
+          "our_play_id": {
+            "type": "string"
+          },
+          "formation": {
+            "type": "string"
+          },
+          "tendency_note": {
+            "type": "string"
+          },
+          "rep_count": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "ai_assumptions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of assumptions made due to missing data"
+    },
+    "coach_notes": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "under_review",
+        "approved",
+        "pushed_to_practice"
+      ],
+      "default": "draft"
+    },
+    "reviewed_by_coach": {
+      "type": "boolean",
+      "default": false
+    },
+    "pushed_to_practice_script_id": {
+      "type": "string"
+    },
+    "pushed_to_game_plan_id": {
+      "type": "string"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "team_id",
+    "side_of_ball"
+  ]
+}
