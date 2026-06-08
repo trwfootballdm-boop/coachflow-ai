@@ -188,6 +188,8 @@ export default function DesignerCanvas({
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape' && drawing) {
+        e.preventDefault();
+        e.stopPropagation();
         setDrawing(null);
         onDrawingChange?.(0);
       }
@@ -200,6 +202,14 @@ export default function DesignerCanvas({
   useEffect(() => {
     onDrawingChange?.(drawing?.points.length || 0);
   }, [drawing, onDrawingChange]);
+
+  // Clear drawing when switching away from draw tools
+  useEffect(() => {
+    if (drawing && !isDrawTool) {
+      setDrawing(null);
+      onDrawingChange?.(0);
+    }
+  }, [activeTool, isDrawTool, drawing, onDrawingChange]);
 
   const DRAW_TOOL_MAP = {
     draw_route: 'pass_route',
@@ -236,6 +246,10 @@ export default function DesignerCanvas({
 
   const handleSVGClick = useCallback((e) => {
     if (dragging) return;
+    
+    // Don't add points if we just finished drawing (dblclick)
+    if (drawing && drawing.points.length < 2) return;
+    
     const coords = toSVG(e);
 
     if (activeTool === 'add_player') {
@@ -254,17 +268,20 @@ export default function DesignerCanvas({
 
     onSelectPlayer?.(null);
     onSelectPath?.(null);
-  }, [dragging, activeTool, isDrawTool, toSVG, onAddPlayer, onSelectPlayer, onSelectPath]);
+  }, [dragging, activeTool, isDrawTool, drawing, toSVG, onAddPlayer, onSelectPlayer, onSelectPath]);
 
-  const handleSVGDblClick = useCallback(() => {
-    if (drawing && drawing.points.length >= 2) {
-      onCommitPath?.({
-        ...drawing,
-        path_id: `path_${Date.now()}`,
-        stroke_width: 2.5,
-      });
-      setDrawing(null);
-    }
+  const handleSVGDblClick = useCallback((e) => {
+    if (!drawing || drawing.points.length < 2) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    onCommitPath?.({
+      ...drawing,
+      path_id: `path_${Date.now()}`,
+      stroke_width: 2.5,
+    });
+    setDrawing(null);
   }, [drawing, onCommitPath]);
 
   useEffect(() => {
@@ -481,10 +498,11 @@ export default function DesignerCanvas({
                     stroke={(PATH_STYLES[drawing.type] || PATH_STYLES.pass_route).stroke}
                     strokeWidth={2.25}
                     strokeDasharray="6 4"
-                    opacity={0.78}
+                    opacity={0.85}
                   />
                 )}
 
+                {/* Preview line to cursor */}
                 <line
                   x1={drawing.points[drawing.points.length - 1].x}
                   y1={drawing.points[drawing.points.length - 1].y}
@@ -493,17 +511,20 @@ export default function DesignerCanvas({
                   stroke={(PATH_STYLES[drawing.type] || PATH_STYLES.pass_route).stroke}
                   strokeWidth={1.5}
                   strokeDasharray="4 4"
-                  opacity={0.5}
+                  opacity={0.4}
                 />
 
+                {/* Waypoint markers */}
                 {drawing.points.map((pt, i) => (
                   <circle
                     key={i}
                     cx={pt.x}
                     cy={pt.y}
-                    r={4}
+                    r={5}
                     fill={(PATH_STYLES[drawing.type] || PATH_STYLES.pass_route).stroke}
-                    opacity={0.88}
+                    opacity={0.9}
+                    stroke="rgba(255,255,255,0.6)"
+                    strokeWidth={1.5}
                   />
                 ))}
               </g>

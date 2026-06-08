@@ -154,7 +154,17 @@ export default function PlayDesigner() {
       if (e.key === 'v' || e.key === 'V') setActiveTool('select');
       if (e.key === 'h' || e.key === 'H') setActiveTool('pan');
       if (e.key === 'p' || e.key === 'P') setActiveTool('add_player');
-      if (e.key === 'Escape') { setActiveTool('select'); setSelectedPlayerId(null); setSelectedPathId(null); }
+      if (e.key === 'Escape') { 
+        e.preventDefault();
+        // Cancel drawing if in progress, otherwise deselect
+        if (drawingPts > 0) {
+          setDrawingPts(0);
+        } else {
+          setActiveTool('select'); 
+          setSelectedPlayerId(null); 
+          setSelectedPathId(null); 
+        }
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && !e.target.isContentEditable) {
         if (selectedPlayerId) removePlayer(selectedPlayerId);
         if (selectedPathId) removePath(selectedPathId);
@@ -162,7 +172,7 @@ export default function PlayDesigner() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [diagram, selectedPlayerId, selectedPathId]);
+  }, [diagram, selectedPlayerId, selectedPathId, drawingPts]);
 
   // ── Diagram mutations ──
   const { current: diag } = diagram;
@@ -173,8 +183,8 @@ export default function PlayDesigner() {
 
   const movePlayer = useCallback((id, x, y) => {
     const updated = diag.players.map(p => p.token_id === id ? { ...p, x, y } : p);
-    // Live move during drag - don't create history entry yet
-    // We'll push to history when the drag completes
+    // Update current state without pushing to history
+    // History will be pushed on mouse up (handled by canvas)
   }, [diag]);
 
   const addPlayer = useCallback((coords) => {
@@ -210,7 +220,14 @@ export default function PlayDesigner() {
   }, [diag, selectedPlayerId, updateDiagram]);
 
   const commitPath = useCallback((newPath) => {
+    // Validate path has minimum required points
+    if (!newPath || !newPath.points || newPath.points.length < 2) {
+      toast.error('Path needs at least 2 points');
+      return;
+    }
+    
     updateDiagram({ paths: [...diag.paths, newPath] });
+    toast.success('Route added');
   }, [diag, updateDiagram]);
 
   const removePath = useCallback((id) => {
