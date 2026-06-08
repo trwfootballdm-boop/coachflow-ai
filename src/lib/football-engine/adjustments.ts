@@ -34,13 +34,15 @@ export function analyzeAdjustments(
   const installFlags: string[] = [];
   const warnings: string[] = [];
 
-  const primaryConcept = concepts.concepts[0]?.concept || 'unknown';
+  const primaryConcept = concepts?.concepts?.[0]?.concept || 'unknown';
+  const dropFamily = timing?.dropFamily || '';
+  const motionRecs = concepts?.motionRecommendations || [];
 
   // Hot route adjustments for pressure
   if (scenario.pressure === '5man' || scenario.pressure === '6man' || scenario.pressure === 'blitz') {
-    const rbPlayer = diagram.players.find((p) => p.position_code === 'RB');
+    const rbPlayer = diagram?.players?.find((p) => p.position_code === 'RB');
     if (rbPlayer) {
-      const rbPath = diagram.paths.find((path) => path.player_token_id === rbPlayer.token_id);
+      const rbPath = diagram?.paths?.find((path) => path.player_token_id === rbPlayer.token_id);
       if (!rbPath || rbPath.path_type === 'block') {
         adjustments.push({
           kind: 'hot',
@@ -55,7 +57,7 @@ export function analyzeAdjustments(
   }
 
   // Protection adjustments
-  if (timing.dropFamily.includes('5-step') || timing.dropFamily.includes('7-step')) {
+  if (dropFamily.includes('5-step') || dropFamily.includes('7-step')) {
     if (scenario.pressure === '5man' || scenario.pressure === '6man') {
       adjustments.push({
         kind: 'protection',
@@ -83,11 +85,11 @@ export function analyzeAdjustments(
   }
 
   // Motion adjustments for coverage identification
-  if (concepts.motionRecommendations.length > 0) {
+  if (motionRecs.length > 0) {
     adjustments.push({
       kind: 'motion',
-      position: concepts.motionRecommendations[0]?.position || 'WR',
-      description: concepts.motionRecommendations[0]?.recommendation || 'Pre-snap motion',
+      position: motionRecs[0]?.position || 'WR',
+      description: motionRecs[0]?.recommendation || 'Pre-snap motion',
       trigger: 'Coverage identification',
       confidence: 0.6,
     });
@@ -95,7 +97,8 @@ export function analyzeAdjustments(
   }
 
   // Formation tags for field/boundary
-  if (diagram.players.filter((p) => p.team_side === 'offense').length <= 4) {
+  const offensivePlayers = diagram?.players?.filter((p) => p.team_side === 'offense') || [];
+  if (offensivePlayers.length <= 4) {
     adjustments.push({
       kind: 'formation_tag',
       position: 'WR',
