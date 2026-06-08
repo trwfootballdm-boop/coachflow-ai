@@ -278,7 +278,7 @@ export default function PlayDesigner() {
   const selectedPath   = diag.paths.find(p => p.path_id === selectedPathId)     || null;
   const selectedType   = selectedPlayer ? 'player' : selectedPath ? 'path' : null;
 
-  // ── Validation & Analysis ──
+  // ── Analysis Pipeline (ordered: validation → concepts → reaction → timing) ──
   const validation = useMemo(() => {
     if (play.side !== 'offense') return null;
     return validateOffensivePlay(diag);
