@@ -41,7 +41,7 @@ const PRIMARY_VIEWS = [
   { key: 'special', label: 'Special' },
 ];
 
-export default function CallSheetBoard({ callSheet, onOpenPlay }) {
+export default function CallSheetBoard({ callSheet, onOpenPlay, renderPlayActions }) {
   const [view, setView] = useState('all');
 
   const orderedSections = useMemo(() => {
@@ -147,6 +147,7 @@ export default function CallSheetBoard({ callSheet, onOpenPlay }) {
                 key={section.bucket}
                 section={section}
                 onOpenPlay={onOpenPlay}
+                renderPlayActions={renderPlayActions}
               />
             ))}
           </div>
@@ -194,7 +195,7 @@ export default function CallSheetBoard({ callSheet, onOpenPlay }) {
   );
 }
 
-function SectionCard({ section, onOpenPlay }) {
+function SectionCard({ section, onOpenPlay, renderPlayActions }) {
   return (
     <div className="rounded-2xl border border-border bg-background/40">
       <div className="flex items-start justify-between border-b border-border px-4 py-3">
@@ -218,51 +219,57 @@ function SectionCard({ section, onOpenPlay }) {
       <div className="space-y-3 p-3">
         {section.plays.length ? (
           section.plays.map((play, index) => (
-            <button
+            <div
               key={`${section.bucket}-${play.playId}-${index}`}
-              type="button"
-              onClick={() => onOpenPlay?.(play, section)}
-              className="w-full rounded-xl border border-border bg-card px-3.5 py-3 text-left shadow-sm transition-colors hover:bg-accent/25"
+              className="w-full rounded-xl border border-border bg-card px-3.5 py-3 shadow-sm"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-foreground">
-                    {play.playName}
+              <button
+                type="button"
+                onClick={() => onOpenPlay?.(play, section)}
+                className="w-full text-left"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-foreground">
+                      {play.playName}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {play.concept}
+                      {play.formation ? ` · ${play.formation}` : ''}
+                      {play.personnel ? ` · ${play.personnel}` : ''}
+                    </div>
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {play.concept}
-                    {play.formation ? ` · ${play.formation}` : ''}
-                    {play.personnel ? ` · ${play.personnel}` : ''}
-                  </div>
+
+                  {typeof play.openerScore === 'number' && section.bucket === 'opening_script' ? (
+                    <div className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
+                      {play.openerScore}
+                    </div>
+                  ) : null}
                 </div>
 
-                {typeof play.openerScore === 'number' && section.bucket === 'opening_script' ? (
-                  <div className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
-                    {play.openerScore}
+                {(play.tags?.length || play.bestFor?.length || play.preferredLook?.length) ? (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {play.tags?.slice(0, 2).map((tag) => (
+                      <MiniPill key={tag} label={tag} />
+                    ))}
+                    {play.bestFor?.slice(0, 1).map((item) => (
+                      <MiniPill key={item} label={item} />
+                    ))}
+                    {play.preferredLook?.slice(0, 1).map((look) => (
+                      <MiniPill key={look} label={look} />
+                    ))}
                   </div>
                 ) : null}
-              </div>
 
-              {(play.tags?.length || play.bestFor?.length || play.preferredLook?.length) ? (
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {play.tags?.slice(0, 2).map((tag) => (
-                    <MiniPill key={tag} label={tag} />
-                  ))}
-                  {play.bestFor?.slice(0, 1).map((item) => (
-                    <MiniPill key={item} label={item} />
-                  ))}
-                  {play.preferredLook?.slice(0, 1).map((look) => (
-                    <MiniPill key={look} label={look} />
-                  ))}
-                </div>
-              ) : null}
+                {play.notes?.length ? (
+                  <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                    {play.notes[0]}
+                  </p>
+                ) : null}
+              </button>
 
-              {play.notes?.length ? (
-                <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                  {play.notes[0]}
-                </p>
-              ) : null}
-            </button>
+              {renderPlayActions ? renderPlayActions(play) : null}
+            </div>
           ))
         ) : (
           <EmptyBlock text="No calls in this section." />
