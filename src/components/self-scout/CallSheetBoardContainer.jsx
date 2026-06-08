@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { usePlayLibraryStore } from '@/lib/football-engine/playLibraryStore.js';
+import { playLibraryStore, usePlayLibraryStore } from '@/lib/football-engine/playLibraryStore.js';
 import BaseCallSheetBoard from './CallSheetBoard.jsx';
 
 export default function CallSheetBoardContainer({ onOpenCall }) {
@@ -13,6 +13,11 @@ export default function CallSheetBoardContainer({ onOpenCall }) {
     [state.calls]
   );
 
+  const lookup = useMemo(
+    () => new Map(eligibleCalls.map((call) => [call.id, call])),
+    [eligibleCalls]
+  );
+
   const callSheet = useMemo(() => {
     return buildCallSheetFromLibrary(
       eligibleCalls,
@@ -21,14 +26,33 @@ export default function CallSheetBoardContainer({ onOpenCall }) {
     );
   }, [eligibleCalls, state.weekly.opponent, state.weekly.weekLabel]);
 
-  const lookup = useMemo(
-    () => new Map(eligibleCalls.map((call) => [call.id, call])),
-    [eligibleCalls]
-  );
-
   return (
     <BaseCallSheetBoard
       callSheet={callSheet}
+      renderPlayActions={(play) => {
+        const source = lookup.get(play.playId);
+        if (!source) return null;
+
+        return (
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => onOpenCall?.(source)}
+              className="rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+            >
+              Open
+            </button>
+
+            <button
+              type="button"
+              onClick={() => playLibraryStore.removeCallFromCallsheet(source.id)}
+              className="rounded-lg border border-amber-500/30 bg-amber-500/12 px-2.5 py-1 text-xs font-medium text-amber-700 transition-colors hover:opacity-90 dark:text-amber-300"
+            >
+              Demote from Call Sheet
+            </button>
+          </div>
+        );
+      }}
       onOpenPlay={(play) => {
         const source = lookup.get(play.playId);
         if (source) onOpenCall?.(source);
