@@ -54,7 +54,7 @@ const TOOL_GROUPS = [
   },
 ];
 
-function ToolButton({ tool, activeTool, onSelect }) {
+function ToolButton({ tool, activeTool, onSelect, disabled }) {
   const isActive = activeTool === tool.id && !tool.action;
   const Icon = tool.icon;
 
@@ -62,12 +62,15 @@ function ToolButton({ tool, activeTool, onSelect }) {
     <button
       type="button"
       aria-label={tool.label}
+      disabled={disabled}
       title={tool.shortcut ? `${tool.label} (${tool.shortcut})` : tool.label}
-      onClick={() => onSelect(tool.id)}
+      onClick={() => !disabled && onSelect(tool.id)}
       className={cn(
         "group relative flex h-11 w-11 items-center justify-center rounded-xl border transition-all",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        isActive
+        disabled
+          ? "cursor-not-allowed border-transparent text-muted-foreground/35"
+          : isActive
           ? "border-primary/30 bg-primary/12 text-primary shadow-sm"
           : "border-transparent text-muted-foreground hover:border-border hover:bg-accent/40 hover:text-foreground"
       )}
