@@ -13,6 +13,8 @@ import CanvasWorkspace       from '@/components/play-designer/CanvasWorkspace';
 import InspectorPanel        from '@/components/play-designer/InspectorPanel';
 import DesignerStatusBar     from '@/components/play-designer/DesignerStatusBar';
 import { validateOffensivePlay } from '@/lib/football-engine/validation';
+import { analyzeConcepts } from '@/lib/football-engine/concepts';
+import { analyzeDefensiveReaction } from '@/lib/football-engine/reactions';
 
 // ─── Default play skeleton ─────────────────────────────────────────────────────
 const EMPTY_PLAY = {
@@ -275,11 +277,26 @@ export default function PlayDesigner() {
   const selectedPath   = diag.paths.find(p => p.path_id === selectedPathId)     || null;
   const selectedType   = selectedPlayer ? 'player' : selectedPath ? 'path' : null;
 
-  // ── Validation ──
+  // ── Validation & Analysis ──
   const validation = useMemo(() => {
     if (play.side !== 'offense') return null;
     return validateOffensivePlay(diag);
   }, [diag, play.side]);
+
+  const concepts = useMemo(() => {
+    if (play.side !== 'offense') return null;
+    return analyzeConcepts(diag);
+  }, [diag, play.side]);
+
+  const reaction = useMemo(() => {
+    if (!concepts) return null;
+    return analyzeDefensiveReaction(diag, concepts, {
+      coverageShell: 'cover_3',
+      frontFamily: 'even',
+      pressure: '4man',
+      middleField: 'closed',
+    });
+  }, [diag, concepts]);
 
   if (loading) {
     return (
