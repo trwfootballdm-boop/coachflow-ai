@@ -1,0 +1,116 @@
+{
+  "name": "LibraryItem",
+  "type": "object",
+  "properties": {
+    "item_name": {
+      "type": "string"
+    },
+    "item_type": {
+      "type": "string",
+      "enum": [
+        "play",
+        "formation_template",
+        "motion_template",
+        "concept_shell",
+        "defensive_look",
+        "special_teams_unit",
+        "situation_bundle"
+      ],
+      "default": "play"
+    },
+    "side_of_ball": {
+      "type": "string",
+      "enum": [
+        "offense",
+        "defense",
+        "special_teams"
+      ],
+      "default": "offense"
+    },
+    "pack_id": {
+      "type": "string",
+      "description": "Reference to LibraryPack"
+    },
+    "formation_name": {
+      "type": "string"
+    },
+    "concept_family": {
+      "type": "string",
+      "description": "e.g. Inside Zone, Power, Mesh, Cover 2"
+    },
+    "system_family": {
+      "type": "string"
+    },
+    "difficulty_level": {
+      "type": "string",
+      "enum": [
+        "beginner",
+        "intermediate",
+        "advanced"
+      ],
+      "default": "beginner"
+    },
+    "age_level": {
+      "type": "string",
+      "enum": [
+        "youth",
+        "middle_school",
+        "high_school",
+        "all"
+      ],
+      "default": "youth"
+    },
+    "short_description": {
+      "type": "string"
+    },
+    "coaching_points": {
+      "type": "string"
+    },
+    "diagram_preview": {
+      "type": "object",
+      "description": "Simplified diagram JSON for thumbnail"
+    },
+    "play_data": {
+      "type": "object",
+      "description": "Full play definition to import"
+    },
+    "situation_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "e.g. openers, red_zone, 3rd_short"
+    },
+    "run_pass": {
+      "type": "string",
+      "enum": [
+        "run",
+        "pass",
+        "rpo",
+        "special_teams",
+        "n/a"
+      ]
+    },
+    "formation_data": {
+      "type": "object",
+      "description": "Formation snapshot for import"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    },
+    "starter_recommended": {
+      "type": "boolean",
+      "default": false
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0
+    }
+  },
+  "required": [
+    "item_name",
+    "item_type",
+    "side_of_ball"
+  ]
+}

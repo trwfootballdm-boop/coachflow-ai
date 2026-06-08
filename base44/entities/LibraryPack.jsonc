@@ -1,0 +1,70 @@
+{
+  "name": "LibraryPack",
+  "type": "object",
+  "properties": {
+    "pack_name": {
+      "type": "string",
+      "description": "e.g. Youth I-Formation Starter"
+    },
+    "pack_type": {
+      "type": "string",
+      "enum": [
+        "offense_system",
+        "defense_system",
+        "special_teams",
+        "situation_bundle",
+        "formation_pack",
+        "concept_pack",
+        "custom"
+      ],
+      "default": "offense_system"
+    },
+    "side_of_ball": {
+      "type": "string",
+      "enum": [
+        "offense",
+        "defense",
+        "special_teams",
+        "all"
+      ],
+      "default": "offense"
+    },
+    "age_level": {
+      "type": "string",
+      "enum": [
+        "youth",
+        "middle_school",
+        "high_school",
+        "all"
+      ],
+      "default": "youth"
+    },
+    "system_family": {
+      "type": "string",
+      "description": "e.g. Wing-T, Spread, I-Formation, 4-3, 5-3"
+    },
+    "description": {
+      "type": "string"
+    },
+    "cover_image": {
+      "type": "string",
+      "description": "Optional image URL"
+    },
+    "item_count": {
+      "type": "integer",
+      "default": 0
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0
+    }
+  },
+  "required": [
+    "pack_name",
+    "side_of_ball"
+  ]
+}

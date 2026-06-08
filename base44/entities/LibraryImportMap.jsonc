@@ -1,0 +1,49 @@
+{
+  "name": "LibraryImportMap",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "source_item_id": {
+      "type": "string",
+      "description": "Reference to LibraryItem"
+    },
+    "source_pack_id": {
+      "type": "string",
+      "description": "Reference to LibraryPack (if pack import)"
+    },
+    "source_bundle_id": {
+      "type": "string",
+      "description": "Reference to LibraryBundle (if bundle import)"
+    },
+    "imported_play_id": {
+      "type": "string",
+      "description": "Resulting Play entity ID"
+    },
+    "import_type": {
+      "type": "string",
+      "enum": [
+        "single_play",
+        "formation_only",
+        "concept_shell",
+        "full_pack",
+        "bundle",
+        "custom"
+      ],
+      "default": "single_play"
+    },
+    "terminology_translated": {
+      "type": "boolean",
+      "default": false
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "team_id",
+    "import_type"
+  ]
+}

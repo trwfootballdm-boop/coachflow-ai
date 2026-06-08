@@ -1,0 +1,67 @@
+{
+  "name": "LibraryBundle",
+  "type": "object",
+  "properties": {
+    "bundle_name": {
+      "type": "string",
+      "description": "e.g. Red Zone Package, Day 1 Install"
+    },
+    "bundle_type": {
+      "type": "string",
+      "enum": [
+        "situation",
+        "install_day",
+        "game_plan",
+        "personnel",
+        "custom"
+      ],
+      "default": "situation"
+    },
+    "side_of_ball": {
+      "type": "string",
+      "enum": [
+        "offense",
+        "defense",
+        "special_teams",
+        "all"
+      ],
+      "default": "offense"
+    },
+    "description": {
+      "type": "string"
+    },
+    "item_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "LibraryItem IDs in this bundle"
+    },
+    "age_level": {
+      "type": "string",
+      "enum": [
+        "youth",
+        "middle_school",
+        "high_school",
+        "all"
+      ],
+      "default": "all"
+    },
+    "situation_key": {
+      "type": "string",
+      "description": "Maps to call sheet section e.g. red_zone, third_short"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0
+    }
+  },
+  "required": [
+    "bundle_name",
+    "side_of_ball"
+  ]
+}

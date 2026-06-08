@@ -1,460 +1,383 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTeam } from '@/components/TeamContext';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Save, Loader2, AlertTriangle, ArrowLeft, Plus, Sparkles,
-  Play, Pause, ChevronLeft, Eye, Download, RotateCcw, Copy
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useNavigate } from 'react-router-dom';
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import FieldCanvas from '@/components/play-designer/FieldCanvas';
-import ToolPalette from '@/components/play-designer/ToolPalette';
-import PropertiesPanel from '@/components/play-designer/PropertiesPanel';
-import VersionBar from '@/components/play-designer/VersionBar';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-let _tokenId = 1;
-const newTokenId = () => `tok_${Date.now()}_${_tokenId++}`;
-let _pathId = 1;
-const newPathId = () => `path_${Date.now()}_${_pathId++}`;
-let _annId = 1;
-const newAnnId = () => `ann_${Date.now()}_${_annId++}`;
+import DesignerHeader    from '@/components/play-designer/DesignerHeader';
+import ToolPalette       from '@/components/play-designer/ToolPalette';
+import DesignerCanvas    from '@/components/play-designer/DesignerCanvas';
+import RightInspector    from '@/components/play-designer/RightInspector';
+import DesignerStatusBar from '@/components/play-designer/DesignerStatusBar';
 
-const DEFAULT_OFFENSE_FORMATION = [
-  { token_id: newTokenId(), position_code: 'C',  display_label: 'C',  x: 400, y: 255, team_side: 'offense', role_type: 'lineman' },
-  { token_id: newTokenId(), position_code: 'LG', display_label: 'LG', x: 360, y: 255, team_side: 'offense', role_type: 'lineman' },
-  { token_id: newTokenId(), position_code: 'RG', display_label: 'RG', x: 440, y: 255, team_side: 'offense', role_type: 'lineman' },
-  { token_id: newTokenId(), position_code: 'LT', display_label: 'LT', x: 316, y: 255, team_side: 'offense', role_type: 'lineman' },
-  { token_id: newTokenId(), position_code: 'RT', display_label: 'RT', x: 484, y: 255, team_side: 'offense', role_type: 'lineman' },
-  { token_id: newTokenId(), position_code: 'QB', display_label: 'QB', x: 400, y: 290, team_side: 'offense', role_type: 'ball_carrier' },
-  { token_id: newTokenId(), position_code: 'RB', display_label: 'RB', x: 400, y: 330, team_side: 'offense', role_type: 'ball_carrier' },
-  { token_id: newTokenId(), position_code: 'WR', display_label: 'X',  x: 140, y: 255, team_side: 'offense', role_type: 'receiver' },
-  { token_id: newTokenId(), position_code: 'WR', display_label: 'Z',  x: 660, y: 255, team_side: 'offense', role_type: 'receiver' },
-  { token_id: newTokenId(), position_code: 'TE', display_label: 'TE', x: 532, y: 255, team_side: 'offense', role_type: 'receiver' },
+// ─── Default play skeleton ─────────────────────────────────────────────────────
+const EMPTY_PLAY = {
+  name: '', play_name: '', short_name: '',
+  side: 'offense', run_pass: '', play_type: '', play_family: '',
+  formation: '', personnel: '', motion: '', strength: 'any',
+  concept: '', direction: 'any',
+  hash_tags: [], down_distance_tags: [], field_zone_tags: [],
+  opponent_front_tags: [], coverage_tags: [], tags: [],
+  install_week: null, install_day: null,
+  age_level_difficulty: '', risk_level: 'medium',
+  coaching_points: '', notes: '',
+  is_favorite: false, is_active: true, version: 1,
+};
+
+// ─── Default offense formation (half-field view) ───────────────────────────────
+const DEFAULT_PLAYERS = [
+  { token_id: 'C',   position_code: 'C',   display_label: 'C',   x: 450, y: 290, team_side: 'offense', role_type: 'lineman' },
+  { token_id: 'LG',  position_code: 'LG',  display_label: 'LG',  x: 410, y: 290, team_side: 'offense', role_type: 'lineman' },
+  { token_id: 'RG',  position_code: 'RG',  display_label: 'RG',  x: 490, y: 290, team_side: 'offense', role_type: 'lineman' },
+  { token_id: 'LT',  position_code: 'LT',  display_label: 'LT',  x: 370, y: 290, team_side: 'offense', role_type: 'lineman' },
+  { token_id: 'RT',  position_code: 'RT',  display_label: 'RT',  x: 530, y: 290, team_side: 'offense', role_type: 'lineman' },
+  { token_id: 'QB',  position_code: 'QB',  display_label: 'QB',  x: 450, y: 330, team_side: 'offense', role_type: 'ball_carrier' },
+  { token_id: 'RB',  position_code: 'RB',  display_label: 'RB',  x: 450, y: 375, team_side: 'offense', role_type: 'ball_carrier' },
+  { token_id: 'X',   position_code: 'WR',  display_label: 'X',   x: 140, y: 290, team_side: 'offense', role_type: 'receiver' },
+  { token_id: 'Z',   position_code: 'WR',  display_label: 'Z',   x: 760, y: 290, team_side: 'offense', role_type: 'receiver' },
+  { token_id: 'H',   position_code: 'WR',  display_label: 'H',   x: 640, y: 290, team_side: 'offense', role_type: 'receiver' },
+  { token_id: 'Y',   position_code: 'TE',  display_label: 'Y',   x: 570, y: 290, team_side: 'offense', role_type: 'receiver' },
 ];
 
-// ─── Play selector sidebar ────────────────────────────────────────────────────
-function PlaySelector({ plays, playsLoading, selectedPlayId, onSelect, onNew }) {
-  const [search, setSearch] = useState('');
-  const filtered = useMemo(() => plays.filter(p =>
-    !search || [p.name, p.play_name, p.short_name].filter(Boolean).join(' ').toLowerCase().includes(search.toLowerCase())
-  ), [plays, search]);
+// ─── History helpers ───────────────────────────────────────────────────────────
+function useHistory(initial) {
+  const [stack, setStack]   = useState([initial]);
+  const [cursor, setCursor] = useState(0);
 
-  return (
-    <div className="w-52 shrink-0 bg-gray-900 border-r border-gray-700 flex flex-col overflow-hidden">
-      <div className="px-3 py-2.5 border-b border-gray-700 shrink-0">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500">Plays</p>
-          <button onClick={onNew}
-            className="h-6 w-6 rounded flex items-center justify-center bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-all">
-            <Plus className="h-3.5 w-3.5" />
-          </button>
-        </div>
-        <input
-          value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search…"
-          className="w-full bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-primary"
-        />
-      </div>
-      <div className="flex-1 overflow-y-auto divide-y divide-gray-800">
-        {playsLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
-          </div>
-        ) : filtered.map(play => (
-          <button key={play.id} onClick={() => onSelect(play)}
-            className={cn(
-              "w-full text-left px-3 py-2.5 transition-colors",
-              selectedPlayId === play.id ? "bg-primary/20 border-l-2 border-primary" : "hover:bg-gray-800"
-            )}>
-            <p className="text-xs font-semibold text-white truncate">{play.name || play.play_name}</p>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              {play.short_name && <code className="text-[9px] text-gray-500 font-mono">{play.short_name}</code>}
-              {play.side && (
-                <span className={cn("text-[9px] font-bold",
-                  play.side === 'offense' ? "text-sky-500" :
-                  play.side === 'defense' ? "text-red-500" : "text-amber-500"
-                )}>
-                  {play.side === 'special_teams' ? 'ST' : play.side?.slice(0, 3).toUpperCase()}
-                </span>
-              )}
-            </div>
-          </button>
-        ))}
-        {filtered.length === 0 && !playsLoading && (
-          <div className="py-8 text-center text-xs text-gray-600">No plays found</div>
-        )}
-      </div>
-    </div>
-  );
+  const current = stack[cursor];
+
+  const push = useCallback((next) => {
+    setStack(prev => {
+      const trimmed = prev.slice(0, cursor + 1);
+      return [...trimmed, next].slice(-40); // keep 40 states
+    });
+    setCursor(prev => Math.min(prev + 1, 39));
+  }, [cursor]);
+
+  const undo = useCallback(() => setCursor(c => Math.max(0, c - 1)), []);
+  const redo = useCallback(() => setStack(s => { setCursor(c => Math.min(s.length - 1, c + 1)); return s; }), []);
+
+  return { current, push, undo, redo, canUndo: cursor > 0, canRedo: cursor < stack.length - 1 };
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Main page ─────────────────────────────────────────────────────────────────
 export default function PlayDesigner() {
   const { activeTeamId } = useTeam();
-  const queryClient = useQueryClient();
+  const navigate         = useNavigate();
+  const queryClient      = useQueryClient();
+  const urlParams        = new URLSearchParams(window.location.search);
+  const editId           = urlParams.get('id');
+  const isNew            = !editId;
+
+  // ── Play metadata ──
+  const [play, setPlay]       = useState({ ...EMPTY_PLAY, team_id: activeTeamId });
+  const [savedPlay, setSaved] = useState(null);
+  const [loading, setLoading] = useState(!!editId);
+
+  // ── Diagram state (history-tracked) ──
+  const diagram = useHistory({ players: DEFAULT_PLAYERS, paths: [], annotations: [] });
 
   // ── Editor state ──
-  const [selectedPlay, setSelectedPlay] = useState(null);
-  const [isDirty, setIsDirty] = useState(false);
-  const [activeTool, setActiveTool] = useState('select');
-  const [selectedId, setSelectedId] = useState(null);
-  const [selectedType, setSelectedType] = useState(null); // 'player' | 'path'
+  const [activeTool,       setActiveTool]       = useState('select');
+  const [selectedPlayerId, setSelectedPlayerId] = useState(null);
+  const [selectedPathId,   setSelectedPathId]   = useState(null);
+  const [drawingPts,       setDrawingPts]       = useState(0);
 
-  // ── Diagram state ──
-  const [players, setPlayers] = useState(DEFAULT_OFFENSE_FORMATION.map(p => ({ ...p })));
-  const [paths, setPaths] = useState([]);
-  const [annotations, setAnnotations] = useState([]);
-  const [playMeta, setPlayMeta] = useState({ coaching_points: '', notes: '' });
+  const isDirty = savedPlay ? JSON.stringify(play) !== JSON.stringify(savedPlay) : !isNew;
 
-  // ── Versions ──
-  const [versions, setVersions] = useState([{ id: 'v1', version_number: 1, version_label: 'Base', variation_type: 'base', is_active: true }]);
-  const [activeVersionId, setActiveVersionId] = useState('v1');
-
-  // ── History (undo/redo) ──
-  const [history, setHistory] = useState([]);
-  const [historyIdx, setHistoryIdx] = useState(-1);
-
-  const pushHistory = useCallback((state) => {
-    setHistory(prev => [...prev.slice(0, historyIdx + 1), state].slice(-30));
-    setHistoryIdx(prev => Math.min(prev + 1, 29));
-  }, [historyIdx]);
-
-  // ── Data ──
-  const { data: plays = [], isLoading: playsLoading } = useQuery({
-    queryKey: ['plays', activeTeamId],
-    queryFn: () => base44.entities.Play.filter({ team_id: activeTeamId }, 'name'),
-    enabled: !!activeTeamId,
-  });
-
-  const { data: playVersions = [], refetch: refetchVersions } = useQuery({
-    queryKey: ['playVersions', selectedPlay?.id],
-    queryFn: () => base44.entities.PlayVersion.filter({ play_id: selectedPlay.id }, '-version_number'),
-    enabled: !!selectedPlay?.id,
-  });
-
-  // ── Mutations ──
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedPlay?.id || !activeTeamId) return;
-      const diagramData = { players, paths, annotations };
-      const existing = playVersions.find(v => v.id === activeVersionId);
-      if (existing) {
-        return base44.entities.PlayVersion.update(existing.id, { diagram_json: diagramData, paths, annotations });
+  // ── Load existing play ──
+  useEffect(() => {
+    if (!editId) return;
+    setLoading(true);
+    base44.entities.Play.filter({ id: editId }).then(plays => {
+      if (plays[0]) {
+        setPlay(plays[0]);
+        setSaved(plays[0]);
+        // Load diagram data if stored on play
+        if (plays[0].diagram_data) {
+          const { players, paths, annotations } = plays[0].diagram_data;
+          diagram.push({
+            players: players || DEFAULT_PLAYERS,
+            paths:   paths   || [],
+            annotations: annotations || [],
+          });
+        }
       }
-      return base44.entities.PlayVersion.create({
-        play_id: selectedPlay.id,
-        team_id: activeTeamId,
-        version_number: 1,
-        version_label: 'Base',
-        variation_type: 'base',
-        is_active: true,
-        diagram_json: diagramData,
-        paths,
-        annotations,
-      });
-    },
-    onSuccess: () => {
-      setIsDirty(false);
-      refetchVersions();
-      toast.success('Play diagram saved');
-    },
-  });
+      setLoading(false);
+    });
+  }, [editId]);
 
-  const createPlayMutation = useMutation({
-    mutationFn: (name) => base44.entities.Play.create({
-      team_id: activeTeamId,
-      name,
-      side: 'offense',
-    }),
-    onSuccess: (play) => {
-      queryClient.invalidateQueries({ queryKey: ['plays', activeTeamId] });
-      loadPlay(play);
-      toast.success(`"${play.name}" created`);
-    },
-  });
+  useEffect(() => {
+    if (activeTeamId && isNew) setPlay(p => ({ ...p, team_id: activeTeamId }));
+  }, [activeTeamId, isNew]);
 
-  // ── Load play ──
-  const loadPlay = (play) => {
-    setSelectedPlay(play);
-    setPlayers(DEFAULT_OFFENSE_FORMATION.map(p => ({ ...p, token_id: newTokenId() })));
-    setPaths([]);
-    setAnnotations([]);
-    setSelectedId(null);
-    setSelectedType(null);
-    setIsDirty(false);
-    setHistory([]);
-    setHistoryIdx(-1);
-  };
+  // ── Keyboard shortcuts ──
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); diagram.undo(); }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'y') { e.preventDefault(); diagram.redo(); }
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); handleSave(); }
+      if (e.key === 'v' || e.key === 'V') setActiveTool('select');
+      if (e.key === 'h' || e.key === 'H') setActiveTool('pan');
+      if (e.key === 'p' || e.key === 'P') setActiveTool('add_player');
+      if (e.key === 'Escape') { setActiveTool('select'); setSelectedPlayerId(null); setSelectedPathId(null); }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !e.target.isContentEditable) {
+        if (selectedPlayerId) removePlayer(selectedPlayerId);
+        if (selectedPathId) removePath(selectedPathId);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [diagram, selectedPlayerId, selectedPathId]);
 
-  const handleNewPlay = () => {
-    const name = prompt('New play name:');
-    if (name?.trim()) createPlayMutation.mutate(name.trim());
-  };
+  // ── Diagram mutations ──
+  const { current: diag } = diagram;
 
-  // ── Canvas operations ──
-  const markDirty = () => setIsDirty(true);
+  const updateDiagram = useCallback((patch) => {
+    diagram.push({ ...diag, ...patch });
+  }, [diag, diagram]);
+
+  const movePlayer = useCallback((id, x, y) => {
+    const updated = diag.players.map(p => p.token_id === id ? { ...p, x, y } : p);
+    // live move without history push (push on mouse-up via onSelectPlayer settle)
+    diagram.push({ ...diag, players: updated });
+  }, [diag, diagram]);
 
   const addPlayer = useCallback((coords) => {
+    const newId = `player_${Date.now()}`;
     const newPlayer = {
-      token_id: newTokenId(),
-      position_code: 'WR',
-      display_label: 'WR',
-      x: coords.x,
-      y: coords.y,
-      team_side: 'offense',
-      role_type: 'receiver',
+      token_id: newId,
+      position_code: 'WR', display_label: 'WR',
+      x: coords.x, y: coords.y,
+      team_side: play.side === 'defense' ? 'defense' : 'offense',
+      role_type: 'other',
     };
-    setPlayers(prev => [...prev, newPlayer]);
-    markDirty();
+    updateDiagram({ players: [...diag.players, newPlayer] });
+    setSelectedPlayerId(newId);
     setActiveTool('select');
-    setSelectedId(newPlayer.token_id);
-    setSelectedType('player');
-  }, []);
+  }, [diag, updateDiagram, play.side]);
 
-  const movePlayer = useCallback((tokenId, x, y) => {
-    setPlayers(prev => prev.map(p => p.token_id === tokenId ? { ...p, x, y } : p));
-    markDirty();
-  }, []);
+  const removePlayer = useCallback((id) => {
+    updateDiagram({ players: diag.players.filter(p => p.token_id !== id) });
+    setSelectedPlayerId(null);
+  }, [diag, updateDiagram]);
 
   const updatePlayer = useCallback((updated) => {
-    setPlayers(prev => prev.map(p => p.token_id === updated.token_id ? updated : p));
-    markDirty();
-  }, []);
+    updateDiagram({ players: diag.players.map(p => p.token_id === updated.token_id ? updated : p) });
+  }, [diag, updateDiagram]);
 
-  const deletePlayer = useCallback((tokenId) => {
-    setPlayers(prev => prev.filter(p => p.token_id !== tokenId));
-    setPaths(prev => prev.filter(p => p.token_id !== tokenId));
-    setSelectedId(null);
-    setSelectedType(null);
-    markDirty();
-  }, []);
-
-  const duplicatePlayer = useCallback((tokenId) => {
-    const src = players.find(p => p.token_id === tokenId);
+  const duplicatePlayer = useCallback(() => {
+    const src = diag.players.find(p => p.token_id === selectedPlayerId);
     if (!src) return;
-    const copy = { ...src, token_id: newTokenId(), x: src.x + 20, y: src.y + 20 };
-    setPlayers(prev => [...prev, copy]);
-    setSelectedId(copy.token_id);
-    markDirty();
-  }, [players]);
+    const newId = `player_${Date.now()}`;
+    const copy = { ...src, token_id: newId, x: src.x + 20, y: src.y + 20 };
+    updateDiagram({ players: [...diag.players, copy] });
+    setSelectedPlayerId(newId);
+  }, [diag, selectedPlayerId, updateDiagram]);
 
-  const addPath = useCallback((pathData) => {
-    const newPath = {
-      path_id: newPathId(),
-      token_id: selectedId,
-      path_type: pathData.type,
-      points: pathData.points,
-      curve_type: 'straight',
-      arrowhead: 'open',
-      line_style: 'solid',
-      stroke_width: 2.5,
-      visible: true,
-    };
-    setPaths(prev => [...prev, newPath]);
-    markDirty();
-  }, [selectedId]);
+  const commitPath = useCallback((newPath) => {
+    updateDiagram({ paths: [...diag.paths, newPath] });
+  }, [diag, updateDiagram]);
+
+  const removePath = useCallback((id) => {
+    updateDiagram({ paths: diag.paths.filter(p => p.path_id !== id) });
+    setSelectedPathId(null);
+  }, [diag, updateDiagram]);
 
   const updatePath = useCallback((updated) => {
-    setPaths(prev => prev.map(p => p.path_id === updated.path_id ? updated : p));
-    markDirty();
-  }, []);
+    updateDiagram({ paths: diag.paths.map(p => p.path_id === updated.path_id ? updated : p) });
+  }, [diag, updateDiagram]);
 
-  const deletePath = useCallback((pathId) => {
-    setPaths(prev => prev.filter(p => p.path_id !== pathId));
-    setSelectedId(null);
-    setSelectedType(null);
-    markDirty();
-  }, []);
+  const flipHorizontal = useCallback(() => {
+    const midX = 450;
+    const flippedPlayers = diag.players.map(p => ({ ...p, x: midX + (midX - p.x) }));
+    const flippedPaths = diag.paths.map(path => ({
+      ...path,
+      points: path.points.map(pt => ({ ...pt, x: midX + (midX - pt.x) })),
+    }));
+    updateDiagram({ players: flippedPlayers, paths: flippedPaths });
+    toast.success('Play flipped horizontally');
+  }, [diag, updateDiagram]);
 
-  const handleSelectPlayer = useCallback((tokenId) => {
-    setSelectedId(tokenId);
-    setSelectedType(tokenId ? 'player' : null);
-  }, []);
+  // ── Save ──
+  const saveMutation = useMutation({
+    mutationFn: async (data) => {
+      const payload = {
+        ...data, team_id: activeTeamId,
+        diagram_data: { players: diag.players, paths: diag.paths, annotations: diag.annotations },
+      };
+      if (payload.name) payload.play_name = payload.name;
+      if (payload.play_name && !payload.name) payload.name = payload.play_name;
+      if (editId) return base44.entities.Play.update(editId, payload);
+      return base44.entities.Play.create(payload);
+    },
+    onSuccess: (saved) => {
+      queryClient.invalidateQueries({ queryKey: ['plays'] });
+      setSaved({ ...play });
+      toast.success(editId ? 'Play saved' : 'Play created');
+      if (isNew && saved?.id) navigate(`/play-designer?id=${saved.id}`, { replace: true });
+    },
+  });
 
-  const handleAction = useCallback((actionId) => {
-    if (actionId === 'undo') {
-      if (historyIdx > 0) { setHistoryIdx(h => h - 1); }
-    } else if (actionId === 'redo') {
-      if (historyIdx < history.length - 1) { setHistoryIdx(h => h + 1); }
-    } else if (actionId === 'flip') {
-      setPlayers(prev => prev.map(p => ({ ...p, x: 800 - p.x })));
-      setPaths(prev => prev.map(path => ({
-        ...path,
-        points: path.points.map(pt => ({ ...pt, x: 800 - pt.x }))
-      })));
-      markDirty();
-      toast.success('Formation flipped');
-    } else if (actionId === 'reset') {
-      setPlayers(DEFAULT_OFFENSE_FORMATION.map(p => ({ ...p, token_id: newTokenId() })));
-      setPaths([]);
-      setAnnotations([]);
-      markDirty();
-      toast.success('Reset to default formation');
-    } else if (actionId === 'animate') {
-      toast.info('Animation preview coming soon');
-    }
-  }, [history, historyIdx]);
-
-  const handleCreateVersion = (versionData) => {
-    const id = `v${versions.length + 1}_${Date.now()}`;
-    setVersions(prev => [...prev, { ...versionData, id, version_number: prev.length + 1 }]);
-    setActiveVersionId(id);
-    toast.success(`Version "${versionData.version_label}" created`);
+  const handleSave = () => {
+    const name = play.name || play.play_name;
+    if (!name?.trim()) { toast.error('Play name is required — add it in the Play panel →'); return; }
+    saveMutation.mutate(play);
   };
 
-  const totalPlayers = players.length;
-  const totalPaths = paths.length;
+  const handleSaveNewVersion = async () => {
+    const { id, created_date, updated_date, created_by_id, ...data } = play;
+    const v = (play.version || 1) + 1;
+    const created = await base44.entities.Play.create({
+      ...data, team_id: activeTeamId, version: v,
+      name: play.name || play.play_name, play_name: play.name || play.play_name,
+      diagram_data: { players: diag.players, paths: diag.paths, annotations: diag.annotations },
+    });
+    queryClient.invalidateQueries({ queryKey: ['plays'] });
+    toast.success(`Saved as v${v}`);
+    navigate(`/play-designer?id=${created.id}`);
+  };
+
+  const handleDuplicate = async () => {
+    const { id, created_date, updated_date, created_by_id, ...data } = play;
+    const newPlay = await base44.entities.Play.create({
+      ...data, team_id: activeTeamId,
+      name: `${play.name || play.play_name} (Copy)`,
+      play_name: `${play.name || play.play_name} (Copy)`,
+      diagram_data: { players: diag.players, paths: diag.paths, annotations: diag.annotations },
+    });
+    queryClient.invalidateQueries({ queryKey: ['plays'] });
+    toast.success('Play duplicated');
+    navigate(`/play-designer?id=${newPlay.id}`);
+  };
+
+  const handleDelete = () => {
+    if (!editId) return;
+    if (window.confirm('Delete this play? This cannot be undone.')) {
+      base44.entities.Play.delete(editId).then(() => {
+        queryClient.invalidateQueries({ queryKey: ['plays'] });
+        toast.success('Play deleted');
+        navigate('/play-library');
+      });
+    }
+  };
+
+  // ── Derived selection objects ──
+  const selectedPlayer = diag.players.find(p => p.token_id === selectedPlayerId) || null;
+  const selectedPath   = diag.paths.find(p => p.path_id === selectedPathId)     || null;
+  const selectedType   = selectedPlayer ? 'player' : selectedPath ? 'path' : null;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
-    <div className="-m-6 flex h-[calc(100vh-64px)] overflow-hidden bg-gray-950">
-      {/* ── Play selector sidebar ── */}
-      <PlaySelector
-        plays={plays}
-        playsLoading={playsLoading}
-        selectedPlayId={selectedPlay?.id}
-        onSelect={loadPlay}
-        onNew={handleNewPlay}
+    <div className="-m-6 flex flex-col bg-gray-900" style={{ height: 'calc(100vh - 0px)', overflow: 'hidden' }}>
+      {/* ── Top Header ── */}
+      <DesignerHeader
+        play={play}
+        isDirty={isDirty}
+        isSaving={saveMutation.isPending}
+        isNew={isNew}
+        onBack={() => navigate('/play-library')}
+        onSave={handleSave}
+        onSaveNewVersion={handleSaveNewVersion}
+        onDuplicate={handleDuplicate}
+        onFlip={flipHorizontal}
+        onToggleFav={() => setPlay(p => ({ ...p, is_favorite: !p.is_favorite }))}
+        onDelete={handleDelete}
       />
 
-      {/* ── Main editor area ── */}
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {/* ── Top toolbar ── */}
-        <div className="bg-gray-900 border-b border-gray-700 px-4 py-2 flex items-center gap-3 shrink-0">
-          <div className="flex-1 min-w-0">
-            {selectedPlay ? (
-              <div className="flex items-center gap-2">
-                <h1 className="text-sm font-bold text-white truncate">
-                  {selectedPlay.name || selectedPlay.play_name}
-                </h1>
-                {selectedPlay.short_name && (
-                  <code className="text-[10px] text-gray-500 font-mono">{selectedPlay.short_name}</code>
-                )}
-                <Badge variant="secondary" className="text-[9px] bg-gray-800 text-gray-400 border-gray-700">
-                  {selectedPlay.side === 'special_teams' ? 'ST' : selectedPlay.side?.slice(0,3).toUpperCase() || 'OFF'}
-                </Badge>
-                <span className="text-[10px] text-gray-600">{totalPlayers}P · {totalPaths} paths</span>
-                {isDirty && (
-                  <span className="flex items-center gap-1 text-[10px] text-amber-500 font-medium">
-                    <AlertTriangle className="h-3 w-3" /> Unsaved
-                  </span>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">Select or create a play to begin designing</p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1.5 shrink-0">
-            {/* AI helper */}
-            <Button size="sm" variant="outline"
-              className="gap-1.5 text-xs h-8 bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white"
-              onClick={() => toast.info('AI assistant coming soon')}>
-              <Sparkles className="h-3.5 w-3.5 text-violet-400" />
-              <span className="hidden sm:inline">AI Assist</span>
-            </Button>
-
-            <Button size="sm" className="gap-1.5 h-8 text-xs"
-              onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending || !isDirty || !selectedPlay}>
-              {saveMutation.isPending
-                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                : <Save className="h-3.5 w-3.5" />}
-              Save
-            </Button>
-          </div>
-        </div>
-
-        {/* ── Version bar ── */}
-        <VersionBar
-          versions={versions}
-          activeVersionId={activeVersionId}
-          onSelectVersion={(v) => setActiveVersionId(v.id)}
-          onCreateVersion={handleCreateVersion}
-          onCloneVersion={(v) => {
-            const id = `v${versions.length + 1}_${Date.now()}`;
-            setVersions(prev => [...prev, { ...v, id, version_label: `${v.version_label} (copy)`, is_active: false }]);
-          }}
+      {/* ── Main editor row ── */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left tool palette */}
+        <ToolPalette
+          activeTool={activeTool}
+          onSelectTool={setActiveTool}
+          onUndo={diagram.undo}
+          onRedo={diagram.redo}
         />
 
-        {/* ── Canvas + properties ── */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Tool palette */}
-          <ToolPalette activeTool={activeTool} onToolChange={setActiveTool} onAction={handleAction} />
-
-          {/* Field canvas */}
-          <div className="flex-1 relative bg-gray-950 overflow-hidden flex items-center justify-center">
-            {!selectedPlay ? (
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-2xl bg-gray-800 flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">🏈</span>
-                </div>
-                <h3 className="text-white font-display font-semibold mb-2">No play selected</h3>
-                <p className="text-gray-500 text-sm mb-4 max-w-xs">
-                  Choose a play from the sidebar or create a new one to start designing.
-                </p>
-                <button onClick={handleNewPlay}
-                  className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors mx-auto">
-                  <Plus className="h-4 w-4" /> Create New Play
+        {/* Central canvas */}
+        <div className="flex-1 bg-gray-800 overflow-hidden flex flex-col">
+          {/* Field scope / view options bar */}
+          <div className="h-8 bg-gray-900 border-b border-gray-800 flex items-center px-3 gap-3 shrink-0">
+            <span className="text-[10px] text-gray-500 font-mono uppercase tracking-wider">Half Field</span>
+            <div className="flex gap-1">
+              {['Half Field', 'Red Zone', 'Goal Line', 'Full Field'].map(view => (
+                <button key={view}
+                  className="text-[9px] px-1.5 py-0.5 rounded text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors font-medium">
+                  {view}
                 </button>
-              </div>
-            ) : (
-              <FieldCanvas
-                players={players}
-                paths={paths}
-                annotations={annotations}
-                selectedId={selectedId}
-                activeTool={activeTool}
-                onSelectPlayer={handleSelectPlayer}
-                onMovePlayer={movePlayer}
-                onAddPlayer={addPlayer}
-                onAddPath={addPath}
-                onSelectAnnotation={(ann) => { setSelectedId(ann.ann_id); setSelectedType('annotation'); }}
-              />
-            )}
-
-            {/* Tool hint */}
-            {selectedPlay && activeTool && activeTool !== 'select' && (
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-gray-900/90 text-gray-300 text-xs px-3 py-1.5 rounded-full border border-gray-700 pointer-events-none">
-                {activeTool === 'add_player' && 'Click field to place player'}
-                {activeTool === 'draw_route' && 'Click to add points · Double-click to finish route'}
-                {activeTool === 'draw_block' && 'Click to add points · Double-click to finish block track'}
-                {activeTool === 'draw_motion' && 'Click to add points · Double-click to finish motion'}
-                {activeTool === 'draw_blitz' && 'Click to add points · Double-click to finish blitz path'}
-                {activeTool === 'draw_zone' && 'Click to add points · Double-click to finish zone drop'}
-              </div>
-            )}
+              ))}
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-[9px] text-gray-600 font-mono">
+                {diag.players.length}p · {diag.paths.length} paths
+              </span>
+              {(diagram.canUndo || diagram.canRedo) && (
+                <div className="flex gap-1">
+                  <button disabled={!diagram.canUndo} onClick={diagram.undo}
+                    className="text-[9px] px-1.5 py-0.5 rounded disabled:opacity-30 text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors font-mono">
+                    ⌘Z
+                  </button>
+                  <button disabled={!diagram.canRedo} onClick={diagram.redo}
+                    className="text-[9px] px-1.5 py-0.5 rounded disabled:opacity-30 text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors font-mono">
+                    ⌘Y
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Properties panel */}
-          <div className="w-60 xl:w-72 shrink-0 bg-gray-900 border-l border-gray-700 overflow-y-auto">
-            <div className="px-3 py-2 border-b border-gray-700">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500">
-                {selectedType === 'player' ? 'Player Inspector' :
-                 selectedType === 'path' ? 'Path Inspector' : 'Play Properties'}
-              </p>
-            </div>
-            <PropertiesPanel
-              selectedObject={selectedId}
-              selectedType={selectedType}
-              players={players}
-              paths={paths}
-              playData={playMeta}
-              onUpdatePlayer={updatePlayer}
-              onDeletePlayer={deletePlayer}
-              onDuplicatePlayer={duplicatePlayer}
-              onUpdatePath={updatePath}
-              onDeletePath={deletePath}
-              onUpdatePlay={(patch) => { setPlayMeta(m => ({ ...m, ...patch })); markDirty(); }}
+          <div className="flex-1 overflow-hidden">
+            <DesignerCanvas
+              players={diag.players}
+              paths={diag.paths}
+              annotations={diag.annotations}
+              selectedPlayerId={selectedPlayerId}
+              selectedPathId={selectedPathId}
+              activeTool={activeTool}
+              onSelectPlayer={(id) => { setSelectedPlayerId(id); setSelectedPathId(null); }}
+              onSelectPath={(id) => { setSelectedPathId(id); setSelectedPlayerId(null); }}
+              onMovePlayer={movePlayer}
+              onAddPlayer={addPlayer}
+              onCommitPath={commitPath}
+              onDrawingChange={setDrawingPts}
             />
           </div>
         </div>
+
+        {/* Right inspector */}
+        <RightInspector
+          play={play}
+          onPlayChange={setPlay}
+          selectedPlayer={selectedPlayer}
+          onPlayerChange={updatePlayer}
+          onDuplicatePlayer={duplicatePlayer}
+          onRemovePlayer={() => removePlayer(selectedPlayerId)}
+          selectedPath={selectedPath}
+          onPathChange={updatePath}
+          onRemovePath={() => removePath(selectedPathId)}
+        />
       </div>
+
+      {/* ── Bottom status bar ── */}
+      <DesignerStatusBar
+        activeTool={activeTool}
+        playerCount={diag.players.length}
+        pathCount={diag.paths.length}
+        selectedType={selectedType}
+        zoom={1}
+        drawingPointCount={drawingPts}
+      />
     </div>
   );
 }

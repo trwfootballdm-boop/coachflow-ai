@@ -1,329 +1,323 @@
 import React, { useRef, useCallback, useState } from 'react';
-import {
-  Play, Pause, SkipBack, SkipForward, RefreshCw,
-  Repeat, Zap, ChevronDown, ChevronRight, Clock, Sparkles, Trash2
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
+import { X, Clock, Zap, Move, Minus, Plus } from 'lucide-react';
 
-// Event type colors & labels
-const EVENT_META = {
-  pre_snap_motion: { color: '#a78bfa', label: 'Motion' },
-  snap:            { color: '#fbbf24', label: 'Snap' },
-  handoff:         { color: '#f97316', label: 'Handoff' },
-  mesh:            { color: '#f97316', label: 'Mesh' },
-  fake:            { color: '#c084fc', label: 'Fake' },
-  route_release:   { color: '#60a5fa', label: 'Release' },
-  route_break:     { color: '#34d399', label: 'Break' },
-  throw:           { color: '#fde68a', label: 'Throw' },
-  catch:           { color: '#4ade80', label: 'Catch' },
-  blitz_trigger:   { color: '#f87171', label: 'Blitz' },
-  pursuit_start:   { color: '#f87171', label: 'Pursuit' },
-  end_state:       { color: '#6b7280', label: 'End' },
-  custom_marker:   { color: '#e5e7eb', label: 'Marker' },
+const EVENT_COLORS = {
+  snap:             '#fde68a',
+  pre_snap_motion:  '#a78bfa',
+  route_release:    '#60a5fa',
+  handoff:          '#fbbf24',
+  mesh:             '#fbbf24',
+  fake:             '#c084fc',
+  throw:            '#34d399',
+  catch:            '#34d399',
+  blitz_trigger:    '#f87171',
+  pursuit_start:    '#f87171',
+  end_state:        '#9ca3af',
+  custom:           '#e5e7eb',
 };
 
 const PATH_COLORS = {
-  pass_route:     '#60a5fa',
   run_path:       '#f59e0b',
+  pass_route:     '#60a5fa',
   blocking_track: '#fb923c',
   pull_path:      '#fb923c',
   motion_path:    '#a78bfa',
   blitz_path:     '#f87171',
+  pursuit_path:   '#f87171',
   zone_drop:      '#34d399',
+  contain_path:   '#f87171',
   ball_path:      '#fde68a',
   fake_path:      '#c084fc',
-  contain_path:   '#f87171',
-  pursuit_path:   '#f87171',
 };
 
-const SPEED_OPTIONS = [0.25, 0.5, 1, 1.5, 2];
+const EVENT_TYPE_LABELS = {
+  snap: 'Snap', pre_snap_motion: 'Motion', route_release: 'Release',
+  handoff: 'Handoff', mesh: 'Mesh', fake: 'Fake', throw: 'Throw',
+  catch: 'Catch', blitz_trigger: 'Blitz', pursuit_start: 'Pursuit',
+  end_state: 'End', custom: 'Marker',
+};
 
-function formatMs(ms) {
-  if (ms < 1000) return `${Math.round(ms)}ms`;
+function fmtMs(ms) {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-// ─── Single event marker on the ruler ────────────────────────────────────────
-function EventMarker({ event, totalDuration, selectedId, onClick }) {
-  const meta = EVENT_META[event.event_type] || EVENT_META.custom_marker;
-  const pct = (event.time_ms / totalDuration) * 100;
-  const hasPath = !!event.path_id;
-  const durPct = hasPath ? ((event.duration_ms || 1000) / totalDuration) * 100 : 0;
+// ── Single event pill on the timeline track ───────────────────────────────────
+function EventPill({ event, totalDuration, pxPerMs, selected, onSelect, onUpdateTime }) {
+  const dragRef = useRef(null);
+  const left = (event.time_ms / totalDuration) * 100;
+  const width = event.end_ms
+    ? ((event.end_ms - event.time_ms) / totalDuration) * 100
+    : 0;
+  const color = EVENT_COLORS[event.event_type] || '#e5e7eb';
+  const pathColor = event.path_type ? (PATH_COLORS[event.path_type] || color) : color;
+
+  const handleMouseDown = (e) => {
+    e.stopPropagation();
+    onSelect(event);
+    const startX = e.clientX;
+    const startMs = event.time_ms;
+    const track = e.currentTarget.closest('[data-timeline-track]');
+    const trackW = track?.getBoundingClientRect().width || 800;
+
+    const onMove = (me) => {
+      const dx = me.clientX - startX;
+      const dMs = (dx / trackW) * totalDuration;
+      const newMs = Math.max(0, Math.min(totalDuration - 50, startMs + dMs));
+      onUpdateTime(event.event_id, Math.round(newMs));
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
 
   return (
     <div
-      className="absolute top-0 h-full"
-      style={{ left: `${pct}%`, width: hasPath ? `${durPct}%` : 0, pointerEvents: 'none' }}
-    >
-      {/* Duration bar */}
-      {hasPath && (
-        <div
-          className="absolute top-3 h-3 rounded-sm opacity-30"
-          style={{ width: '100%', background: meta.color }}
-        />
+      className={cn(
+        "absolute top-1 bottom-1 rounded cursor-grab active:cursor-grabbing flex items-center overflow-hidden group",
+        "border transition-all",
+        selected ? "border-white/60 z-10" : "border-transparent hover:border-white/30 z-0"
       )}
-      {/* Event diamond marker */}
-      <button
-        className="absolute top-0 -translate-x-1/2 group"
-        style={{ pointerEvents: 'all' }}
-        onClick={e => { e.stopPropagation(); onClick(event); }}
-        title={`${meta.label} at ${formatMs(event.time_ms)}`}
-      >
-        <div
-          className={cn(
-            "w-3 h-3 rotate-45 border-2 transition-all",
-            selectedId === event.event_id
-              ? "scale-125 border-white"
-              : "border-transparent group-hover:scale-110"
-          )}
-          style={{ background: meta.color }}
-        />
-        <span
-          className="absolute top-4 left-1/2 -translate-x-1/2 text-[8px] font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ color: meta.color }}
-        >
-          {meta.label}
+      style={{
+        left: `${left}%`,
+        width: width > 0 ? `${Math.max(width, 2)}%` : undefined,
+        minWidth: width > 0 ? undefined : '4px',
+        backgroundColor: event.end_ms ? pathColor + '30' : 'transparent',
+      }}
+      onMouseDown={handleMouseDown}
+      title={`${EVENT_TYPE_LABELS[event.event_type] || event.event_type} · ${fmtMs(event.time_ms)}`}
+    >
+      {/* Start marker */}
+      <div
+        className="h-full shrink-0"
+        style={{ width: 3, backgroundColor: pathColor, borderRadius: 2 }}
+      />
+      {/* Label */}
+      {width > 4 && (
+        <span className="text-[8px] font-bold px-1 truncate text-white/80 leading-none">
+          {event.label || EVENT_TYPE_LABELS[event.event_type] || ''}
         </span>
-      </button>
+      )}
     </div>
   );
 }
 
-// ─── Player track row ─────────────────────────────────────────────────────────
-function TrackRow({ label, events, paths, totalDuration, selectedId, onSelectEvent, color }) {
+// ── Player row with its events ────────────────────────────────────────────────
+function PlayerTrack({ tokenId, label, events, totalDuration, currentMs, selectedEventId, onSelectEvent, onUpdateEventTime }) {
   return (
-    <div className="flex items-center gap-2 h-8">
-      <div className="w-16 shrink-0 text-right">
-        <span className="text-[9px] font-bold font-mono text-muted-foreground truncate">{label}</span>
+    <div className="flex items-stretch min-h-[28px] group">
+      {/* Row label */}
+      <div className="w-20 shrink-0 pr-2 flex items-center justify-end">
+        <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider truncate">
+          {label}
+        </span>
       </div>
-      <div className="flex-1 relative h-full bg-secondary/30 rounded-sm border border-border/30">
-        {events.map(evt => {
-          const meta = EVENT_META[evt.event_type] || EVENT_META.custom_marker;
-          const pct = (evt.time_ms / totalDuration) * 100;
-          const durPct = evt.path_id ? Math.max(2, ((evt.duration_ms || 1000) / totalDuration) * 100) : 2;
-          return (
-            <div
-              key={evt.event_id}
-              className={cn(
-                "absolute top-1 h-6 rounded-sm cursor-pointer transition-all opacity-70 hover:opacity-100 border",
-                selectedId === evt.event_id ? "opacity-100 ring-1 ring-white" : ""
-              )}
-              style={{
-                left: `${pct}%`,
-                width: `${durPct}%`,
-                background: meta.color,
-                borderColor: meta.color,
-              }}
-              onClick={() => onSelectEvent(evt)}
-              title={`${meta.label} · ${formatMs(evt.time_ms)} → +${formatMs(evt.duration_ms || 0)}`}
-            />
-          );
-        })}
+
+      {/* Track area */}
+      <div
+        className="flex-1 relative bg-secondary/20 rounded border border-border/30 hover:bg-secondary/30 transition-colors"
+        data-timeline-track
+      >
+        {events.map(event => (
+          <EventPill
+            key={event.event_id}
+            event={event}
+            totalDuration={totalDuration}
+            selected={selectedEventId === event.event_id}
+            onSelect={onSelectEvent}
+            onUpdateTime={onUpdateEventTime}
+          />
+        ))}
       </div>
     </div>
   );
 }
 
-// ─── Main timeline component ──────────────────────────────────────────────────
+// ── Main timeline panel ───────────────────────────────────────────────────────
 export default function AnimationTimeline({
-  timeline, players, paths,
-  isPlaying, currentTime, speed, isLooping,
-  totalDuration, selectedEventId,
-  onPlay, onPause, onRestart, onSeek, onStepForward, onStepBack,
-  onSetSpeed, onToggleLoop,
-  onSelectEvent, onUpdateEvent, onDeleteEvent,
-  onAutoGenerate, onSave,
-  collapsed, onToggleCollapsed,
+  timeline,
+  diagram,
+  currentMs,
+  totalDuration,
+  selectedEvent,
+  onSelectEvent,
+  onUpdateEvent,
+  onSeek,
+  isExpanded,
+  onToggleExpand,
 }) {
-  const rulerRef = useRef(null);
+  const trackRef = useRef(null);
 
-  const handleRulerClick = useCallback((e) => {
-    if (!rulerRef.current) return;
-    const rect = rulerRef.current.getBoundingClientRect();
-    const pct = (e.clientX - rect.left) / rect.width;
-    onSeek(Math.round(pct * totalDuration));
+  const handleTrackClick = useCallback((e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const pct = x / rect.width;
+    onSeek(pct * totalDuration);
   }, [totalDuration, onSeek]);
 
-  const playheadPct = (currentTime / totalDuration) * 100;
+  const updateEventTime = useCallback((eventId, newMs) => {
+    if (!timeline || !onUpdateEvent) return;
+    const updated = {
+      ...timeline,
+      events: timeline.events.map(e =>
+        e.event_id === eventId ? { ...e, time_ms: newMs } : e
+      ),
+    };
+    onUpdateEvent(updated);
+  }, [timeline, onUpdateEvent]);
 
-  // Group events by token_id
-  const groupedByPlayer = {};
-  const globalEvents = [];
-  (timeline?.events || []).forEach(evt => {
-    if (evt.token_id) {
-      if (!groupedByPlayer[evt.token_id]) groupedByPlayer[evt.token_id] = [];
-      groupedByPlayer[evt.token_id].push(evt);
-    } else {
-      globalEvents.push(evt);
-    }
-  });
+  if (!timeline) return null;
 
-  // Player label lookup
-  const playerLabels = {};
-  players.forEach(p => { playerLabels[p.token_id] = p.display_label || p.position_code || '?'; });
+  const events = timeline.events || [];
+  const players = diagram?.players || [];
+  const paths = diagram?.paths || [];
+
+  // Group events: system events + per player/path events
+  const systemEvents = events.filter(e => e.is_system || !e.token_id);
+  const pathEvents = events.filter(e => e.path_id && e.end_ms !== undefined);
+
+  // Build tracks grouped by player
+  const playerTracks = players.map(player => {
+    const playerEvents = pathEvents.filter(e => e.token_id === player.token_id);
+    return {
+      tokenId: player.token_id,
+      label: player.display_label || player.position_code || '?',
+      events: playerEvents,
+    };
+  }).filter(t => t.events.length > 0);
+
+  // Misc path events not tied to a player
+  const orphanPathEvents = pathEvents.filter(e => !e.token_id);
+
+  const pct = totalDuration > 0 ? (currentMs / totalDuration) * 100 : 0;
 
   return (
-    <div className="border-t border-border bg-card/90 backdrop-blur-sm flex flex-col shrink-0">
-      {/* ── Collapse toggle ── */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border/50">
-        <button
-          onClick={onToggleCollapsed}
-          className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
-        >
-          {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+    <div className={cn(
+      "border-t border-border bg-card/80 backdrop-blur-sm flex flex-col transition-all duration-200",
+      isExpanded ? "h-48" : "h-8"
+    )}>
+      {/* ── Collapse toggle + label ── */}
+      <div
+        className="flex items-center gap-2 px-3 h-8 shrink-0 cursor-pointer hover:bg-secondary/30 transition-colors"
+        onClick={onToggleExpand}
+      >
+        <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
           Timeline
-        </button>
-
-        {/* Playback controls */}
-        <div className="flex items-center gap-0.5 ml-3 bg-secondary/60 rounded-lg p-0.5">
-          <button onClick={onRestart} className="h-6 w-6 flex items-center justify-center rounded hover:bg-secondary transition-colors" title="Restart">
-            <SkipBack className="h-3.5 w-3.5 text-muted-foreground" />
-          </button>
-          <button onClick={onStepBack} className="h-6 w-6 flex items-center justify-center rounded hover:bg-secondary transition-colors" title="Step back">
-            <span className="text-[9px] font-bold text-muted-foreground">-</span>
-          </button>
-          <button
-            onClick={isPlaying ? onPause : onPlay}
-            className="h-7 w-7 flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/80 transition-colors mx-0.5"
-            title={isPlaying ? 'Pause' : 'Play'}
-          >
-            {isPlaying
-              ? <Pause className="h-3.5 w-3.5" />
-              : <Play className="h-3.5 w-3.5 translate-x-px" />}
-          </button>
-          <button onClick={onStepForward} className="h-6 w-6 flex items-center justify-center rounded hover:bg-secondary transition-colors" title="Step forward">
-            <span className="text-[9px] font-bold text-muted-foreground">+</span>
-          </button>
-          <button onClick={onRestart} className="h-6 w-6 flex items-center justify-center rounded hover:bg-secondary transition-colors" title="Loop">
-            <SkipForward className="h-3.5 w-3.5 text-muted-foreground" />
-          </button>
-        </div>
-
-        {/* Loop toggle */}
-        <button
-          onClick={onToggleLoop}
-          className={cn(
-            "h-6 w-6 flex items-center justify-center rounded-md transition-colors",
-            isLooping ? "bg-primary/20 text-primary" : "text-muted-foreground hover:bg-secondary"
+        </span>
+        {events.length > 0 && (
+          <span className="text-[9px] text-muted-foreground/60 font-mono">
+            {events.length} events · {fmtMs(totalDuration)}
+          </span>
+        )}
+        <div className="ml-auto flex items-center gap-2">
+          {selectedEvent && (
+            <span className="text-[9px] text-primary font-semibold">
+              {EVENT_TYPE_LABELS[selectedEvent.event_type]} @ {fmtMs(selectedEvent.time_ms)}
+            </span>
           )}
-          title="Toggle loop"
-        >
-          <Repeat className="h-3.5 w-3.5" />
-        </button>
-
-        {/* Speed */}
-        <div className="flex items-center bg-secondary/60 rounded-lg p-0.5 gap-0.5">
-          {SPEED_OPTIONS.map(s => (
-            <button
-              key={s}
-              onClick={() => onSetSpeed(s)}
-              className={cn(
-                "px-1.5 py-0.5 text-[9px] font-bold rounded transition-all",
-                speed === s ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {s}×
-            </button>
-          ))}
-        </div>
-
-        {/* Time display */}
-        <div className="ml-2 text-[10px] font-mono text-muted-foreground tabular-nums">
-          {formatMs(currentTime)} / {formatMs(totalDuration)}
-        </div>
-
-        <div className="ml-auto flex items-center gap-1.5">
-          <Button
-            variant="ghost" size="sm"
-            className="gap-1.5 h-6 text-[10px] text-muted-foreground hover:text-foreground"
-            onClick={onAutoGenerate}
-          >
-            <Sparkles className="h-3 w-3" /> Auto-time
-          </Button>
-          <Button
-            variant="ghost" size="sm"
-            className="gap-1.5 h-6 text-[10px] text-muted-foreground hover:text-foreground"
-            onClick={onSave}
-          >
-            <Clock className="h-3 w-3" /> Save timing
-          </Button>
+          <div className={cn("h-3.5 w-3.5 flex items-center justify-center rounded text-muted-foreground transition-transform",
+            isExpanded ? "rotate-180" : "")}>
+            <svg viewBox="0 0 10 6" className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M1 1l4 4 4-4" />
+            </svg>
+          </div>
         </div>
       </div>
 
-      {/* ── Expanded timeline tracks ── */}
-      {!collapsed && (
-        <div className="flex flex-col">
-          {/* Ruler */}
-          <div
-            ref={rulerRef}
-            className="relative h-7 ml-[4.5rem] mr-2 mb-1 cursor-crosshair"
-            onClick={handleRulerClick}
-          >
-            {/* Ruler ticks */}
-            {Array.from({ length: 11 }, (_, i) => {
-              const pct = i * 10;
-              const ms = (totalDuration / 10) * i;
-              return (
-                <div key={i} className="absolute top-0 h-full" style={{ left: `${pct}%` }}>
-                  <div className="w-px h-3 bg-border/60" />
-                  <span className="text-[7px] text-muted-foreground/50 font-mono ml-0.5">{formatMs(ms)}</span>
-                </div>
-              );
-            })}
-
-            {/* Snap marker */}
-            {timeline?.snap_time_ms && (
-              <div
-                className="absolute top-0 h-full border-l-2 border-yellow-400/70 border-dashed"
-                style={{ left: `${(timeline.snap_time_ms / totalDuration) * 100}%` }}
-              >
-                <span className="absolute bottom-0 left-1 text-[7px] font-bold text-yellow-400/70">SNAP</span>
-              </div>
-            )}
-
-            {/* Global event markers */}
-            {globalEvents.map(evt => {
-              const meta = EVENT_META[evt.event_type] || EVENT_META.custom_marker;
-              const pct = (evt.time_ms / totalDuration) * 100;
-              return (
-                <div
-                  key={evt.event_id}
-                  className="absolute top-0 h-full"
-                  style={{ left: `${pct}%` }}
-                  onClick={e => { e.stopPropagation(); onSelectEvent(evt); }}
-                >
-                  <div className="w-0.5 h-full opacity-60" style={{ background: meta.color }} />
-                  <span className="absolute top-0 left-1 text-[7px] font-bold whitespace-nowrap"
-                    style={{ color: meta.color }}>
-                    {meta.label}
-                  </span>
-                </div>
-              );
-            })}
-
-            {/* Playhead */}
+      {isExpanded && (
+        <div className="flex-1 overflow-hidden flex flex-col px-3 pb-2 pt-0 gap-1.5">
+          {/* ── Time ruler ── */}
+          <div className="flex items-stretch relative" ref={trackRef}>
+            <div className="w-20 shrink-0" />
             <div
-              className="absolute top-0 h-full w-0.5 bg-white/90 pointer-events-none z-10"
-              style={{ left: `${playheadPct}%` }}
+              className="flex-1 relative h-5 cursor-pointer"
+              onClick={handleTrackClick}
+              data-timeline-track
             >
-              <div className="w-2.5 h-2.5 bg-white rounded-full -translate-x-1 -translate-y-0 shadow-md" />
+              {/* Ruler ticks */}
+              <div className="absolute inset-0 flex">
+                {Array.from({ length: 11 }, (_, i) => (
+                  <div key={i} className="flex-1 border-l border-border/40 relative">
+                    <span className="absolute top-0 left-0.5 text-[7px] text-muted-foreground/40 font-mono leading-none">
+                      {fmtMs((i / 10) * totalDuration)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* System event markers on ruler */}
+              {systemEvents.map(e => (
+                <div
+                  key={e.event_id}
+                  className="absolute top-0 bottom-0 flex flex-col items-center cursor-pointer group"
+                  style={{ left: `${(e.time_ms / totalDuration) * 100}%` }}
+                  onClick={(ev) => { ev.stopPropagation(); onSelectEvent(e); }}
+                  title={`${EVENT_TYPE_LABELS[e.event_type]} @ ${fmtMs(e.time_ms)}`}
+                >
+                  <div className="w-px h-full"
+                    style={{ backgroundColor: EVENT_COLORS[e.event_type] || '#fff', opacity: 0.6 }} />
+                  <div className="absolute top-1 text-[7px] font-bold whitespace-nowrap -translate-x-1/2 px-0.5 rounded"
+                    style={{ color: EVENT_COLORS[e.event_type] || '#fff', opacity: 0.8 }}>
+                    {EVENT_TYPE_LABELS[e.event_type]}
+                  </div>
+                </div>
+              ))}
+
+              {/* Playhead */}
+              <div
+                className="absolute top-0 bottom-0 w-0.5 bg-white/80 z-20 pointer-events-none"
+                style={{ left: `${pct}%` }}
+              >
+                <div className="absolute -top-0.5 -translate-x-1/2 w-0 h-0"
+                  style={{
+                    borderLeft: '4px solid transparent',
+                    borderRight: '4px solid transparent',
+                    borderTop: '5px solid rgba(255,255,255,0.8)',
+                  }} />
+              </div>
             </div>
           </div>
 
-          {/* Player tracks */}
-          <div className="flex flex-col gap-0.5 px-2 pb-2 max-h-36 overflow-y-auto">
-            {Object.entries(groupedByPlayer).map(([tokenId, evts]) => (
-              <TrackRow
-                key={tokenId}
-                label={playerLabels[tokenId] || tokenId.slice(0, 4)}
-                events={evts}
-                paths={paths}
+          {/* ── Player tracks ── */}
+          <div className="flex-1 overflow-y-auto space-y-1 relative" onClick={handleTrackClick} data-timeline-track>
+            {playerTracks.map(track => (
+              <PlayerTrack
+                key={track.tokenId}
+                {...track}
                 totalDuration={totalDuration}
-                selectedId={selectedEventId}
+                currentMs={currentMs}
+                selectedEventId={selectedEvent?.event_id}
                 onSelectEvent={onSelectEvent}
+                onUpdateEventTime={updateEventTime}
               />
             ))}
+            {orphanPathEvents.length > 0 && (
+              <PlayerTrack
+                tokenId="misc"
+                label="Other"
+                events={orphanPathEvents}
+                totalDuration={totalDuration}
+                currentMs={currentMs}
+                selectedEventId={selectedEvent?.event_id}
+                onSelectEvent={onSelectEvent}
+                onUpdateEventTime={updateEventTime}
+              />
+            )}
+            {playerTracks.length === 0 && orphanPathEvents.length === 0 && (
+              <div className="flex items-center justify-center h-full text-[10px] text-muted-foreground/40">
+                Auto-generate timing to populate tracks
+              </div>
+            )}
+
+            {/* Playhead overlay */}
+            <div
+              className="absolute top-0 bottom-0 w-px bg-white/30 z-10 pointer-events-none"
+              style={{ left: `calc(80px + ${pct}% * (100% - 80px) / 100)` }}
+            />
           </div>
         </div>
       )}
