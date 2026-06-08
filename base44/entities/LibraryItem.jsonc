@@ -3,18 +3,19 @@
   "type": "object",
   "properties": {
     "item_name": {
-      "type": "string"
+      "type": "string",
+      "description": "Play or template name"
     },
     "item_type": {
       "type": "string",
       "enum": [
         "play",
-        "formation_template",
-        "motion_template",
+        "formation",
+        "motion_tag",
         "concept_shell",
         "defensive_look",
-        "special_teams_unit",
-        "situation_bundle"
+        "special_teams",
+        "bundle_shell"
       ],
       "default": "play"
     },
@@ -24,8 +25,7 @@
         "offense",
         "defense",
         "special_teams"
-      ],
-      "default": "offense"
+      ]
     },
     "pack_id": {
       "type": "string",
@@ -38,8 +38,22 @@
       "type": "string",
       "description": "e.g. Inside Zone, Power, Mesh, Cover 2"
     },
-    "system_family": {
-      "type": "string"
+    "play_family": {
+      "type": "string",
+      "description": "e.g. Zone, Power, RPO, Screen"
+    },
+    "run_pass": {
+      "type": "string",
+      "enum": [
+        "run",
+        "pass",
+        "rpo",
+        "special_teams"
+      ]
+    },
+    "short_name": {
+      "type": "string",
+      "description": "Short call code"
     },
     "difficulty_level": {
       "type": "string",
@@ -66,42 +80,40 @@
     "coaching_points": {
       "type": "string"
     },
-    "diagram_preview": {
-      "type": "object",
-      "description": "Simplified diagram JSON for thumbnail"
-    },
-    "play_data": {
-      "type": "object",
-      "description": "Full play definition to import"
-    },
     "situation_tags": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "e.g. openers, red_zone, 3rd_short"
+      "description": "e.g. red_zone, 3rd_short, openers, backed_up"
     },
-    "run_pass": {
-      "type": "string",
-      "enum": [
-        "run",
-        "pass",
-        "rpo",
-        "special_teams",
-        "n/a"
-      ]
+    "down_distance_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
-    "formation_data": {
+    "field_zone_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "diagram_data": {
       "type": "object",
-      "description": "Formation snapshot for import"
+      "description": "Static diagram payload: players, paths, annotations"
     },
-    "active": {
-      "type": "boolean",
-      "default": true
+    "import_payload": {
+      "type": "object",
+      "description": "Full structured data used when importing: Play fields, Formation fields, etc."
     },
     "starter_recommended": {
       "type": "boolean",
       "default": false
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
     },
     "sort_order": {
       "type": "integer",

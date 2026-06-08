@@ -4,20 +4,20 @@
   "properties": {
     "pack_name": {
       "type": "string",
-      "description": "e.g. Youth I-Formation Starter"
+      "description": "Pack display name"
     },
     "pack_type": {
       "type": "string",
       "enum": [
-        "offense_system",
-        "defense_system",
-        "special_teams",
-        "situation_bundle",
-        "formation_pack",
-        "concept_pack",
+        "starter",
+        "formation",
+        "concept",
+        "situation",
+        "special",
+        "defensive",
         "custom"
       ],
-      "default": "offense_system"
+      "default": "starter"
     },
     "side_of_ball": {
       "type": "string",
@@ -26,8 +26,7 @@
         "defense",
         "special_teams",
         "all"
-      ],
-      "default": "offense"
+      ]
     },
     "age_level": {
       "type": "string",
@@ -41,18 +40,14 @@
     },
     "system_family": {
       "type": "string",
-      "description": "e.g. Wing-T, Spread, I-Formation, 4-3, 5-3"
+      "description": "e.g. Wing-T, Spread, I-Formation, 5-3, 4-3"
     },
     "description": {
       "type": "string"
     },
     "cover_image": {
       "type": "string",
-      "description": "Optional image URL"
-    },
-    "item_count": {
-      "type": "integer",
-      "default": 0
+      "description": "URL to cover image"
     },
     "active": {
       "type": "boolean",
@@ -61,6 +56,10 @@
     "sort_order": {
       "type": "integer",
       "default": 0
+    },
+    "item_count": {
+      "type": "integer",
+      "description": "Cached count of items"
     }
   },
   "required": [

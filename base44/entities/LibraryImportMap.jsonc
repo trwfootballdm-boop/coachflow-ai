@@ -4,33 +4,40 @@
   "properties": {
     "team_id": {
       "type": "string",
-      "description": "Reference to Team"
+      "description": "Team that imported"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User who triggered import"
     },
     "source_item_id": {
       "type": "string",
-      "description": "Reference to LibraryItem"
+      "description": "LibraryItem ID imported from"
     },
     "source_pack_id": {
       "type": "string",
-      "description": "Reference to LibraryPack (if pack import)"
+      "description": "LibraryPack ID if pack import"
     },
     "source_bundle_id": {
       "type": "string",
-      "description": "Reference to LibraryBundle (if bundle import)"
+      "description": "LibraryBundle ID if bundle import"
     },
     "imported_play_id": {
       "type": "string",
       "description": "Resulting Play entity ID"
     },
+    "imported_formation_id": {
+      "type": "string",
+      "description": "Resulting Formation entity ID"
+    },
     "import_type": {
       "type": "string",
       "enum": [
         "single_play",
-        "formation_only",
-        "concept_shell",
+        "formation",
         "full_pack",
         "bundle",
-        "custom"
+        "concept_shell"
       ],
       "default": "single_play"
     },
@@ -44,6 +51,7 @@
   },
   "required": [
     "team_id",
+    "source_item_id",
     "import_type"
   ]
 }

@@ -1,11 +1,42 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Edit, Copy, Star, ClipboardList, FileText, PenTool, Shield, Zap } from "lucide-react";
+import { X, Edit, Copy, Star, ClipboardList, FileText, PenTool, Shield, Zap, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import DiagramPreview from '@/components/play-designer/DiagramPreview';
 
 const SIDE_ICON = { offense: Zap, defense: Shield, special_teams: PenTool };
+
+// Fetches the active diagram for a play and renders a live preview
+function DiagramThumbnail({ playId }) {
+  const { data: diagrams = [] } = useQuery({
+    queryKey: ['diagrams', playId],
+    queryFn: () => base44.entities.PlayDiagram.filter({ play_id: playId }, '-created_date'),
+    enabled: !!playId,
+    staleTime: 60000,
+  });
+  const active = diagrams.find(d => d.active) || diagrams[0];
+
+  return (
+    <div className="mx-4 mt-4 aspect-[16/7] rounded-xl overflow-hidden shrink-0 relative border border-emerald-900/20">
+      {active?.diagram_json ? (
+        <DiagramPreview
+          diagramJson={active.diagram_json}
+          animationJson={active.animation_json}
+          compact
+          showControls={!!active.animation_json}
+        />
+      ) : (
+        <div className="w-full h-full bg-emerald-900/20 dark:bg-emerald-950/40 flex items-center justify-center">
+          <PenTool className="h-10 w-10 text-emerald-700/20" />
+        </div>
+      )}
+    </div>
+  );
+}
 
 const META = ({ label, value }) => value ? (
   <div>
@@ -58,10 +89,8 @@ export default function PlayDetailPanel({ play, onClose, onEdit, onDuplicate, on
         </Button>
       </div>
 
-      {/* Diagram placeholder */}
-      <div className="mx-4 mt-4 aspect-[16/7] rounded-xl bg-emerald-900/20 dark:bg-emerald-950/40 flex items-center justify-center border border-emerald-900/10 shrink-0">
-        <PenTool className="h-10 w-10 text-emerald-700/20" />
-      </div>
+      {/* Live diagram preview */}
+      <DiagramThumbnail playId={play.id} />
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-5">

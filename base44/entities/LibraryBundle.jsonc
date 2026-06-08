@@ -4,15 +4,15 @@
   "properties": {
     "bundle_name": {
       "type": "string",
-      "description": "e.g. Red Zone Package, Day 1 Install"
+      "description": "e.g. Day 1 Install, Red Zone, 3rd & Short"
     },
     "bundle_type": {
       "type": "string",
       "enum": [
-        "situation",
         "install_day",
-        "game_plan",
-        "personnel",
+        "situation",
+        "game_plan_section",
+        "teaching_unit",
         "custom"
       ],
       "default": "situation"
@@ -24,8 +24,7 @@
         "defense",
         "special_teams",
         "all"
-      ],
-      "default": "offense"
+      ]
     },
     "description": {
       "type": "string"
@@ -35,7 +34,7 @@
       "items": {
         "type": "string"
       },
-      "description": "LibraryItem IDs in this bundle"
+      "description": "Array of LibraryItem IDs in this bundle"
     },
     "age_level": {
       "type": "string",
@@ -45,11 +44,7 @@
         "high_school",
         "all"
       ],
-      "default": "all"
-    },
-    "situation_key": {
-      "type": "string",
-      "description": "Maps to call sheet section e.g. red_zone, third_short"
+      "default": "youth"
     },
     "active": {
       "type": "boolean",
