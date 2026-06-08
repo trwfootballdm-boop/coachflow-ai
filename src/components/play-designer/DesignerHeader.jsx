@@ -150,7 +150,7 @@ export default function DesignerHeader({
           className={cn(
             "ml-1 h-9 gap-1.5 rounded-xl px-3 text-xs font-semibold",
             isDirty || isNew
-              ? ""
+              ? "bg-primary text-primary-foreground hover:bg-primary/90"
               : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
           )}
         >
