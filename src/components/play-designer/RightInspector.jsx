@@ -3,10 +3,12 @@ import { cn } from "@/lib/utils";
 import PlayerInspector from './PlayerInspector';
 import PathInspector from './PathInspector';
 import PlayMetaPanel from './PlayMetaPanel';
-import { SlidersHorizontal, UserRound, NotebookPen } from "lucide-react";
+import FormationQuickPanel from './FormationQuickPanel';
+import { SlidersHorizontal, UserRound, NotebookPen, LayoutGrid } from "lucide-react";
 
 const TABS = [
   { id: 'play', icon: SlidersHorizontal, label: 'Play' },
+  { id: 'formations', icon: LayoutGrid, label: 'Formations' },
   { id: 'selection', icon: UserRound, label: 'Selection' },
   { id: 'notes', icon: NotebookPen, label: 'Notes' },
 ];
@@ -70,7 +72,14 @@ export default function RightInspector({
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {tab === 'selection' ? (
+        {tab === 'formations' ? (
+          <FormationQuickPanel
+            onLoadFormation={(formationId) => {
+              // Handle formation loading logic here
+              console.log('Load formation:', formationId);
+            }}
+          />
+        ) : tab === 'selection' ? (
           selectedPlayer ? (
             <PlayerInspector
               player={selectedPlayer}
