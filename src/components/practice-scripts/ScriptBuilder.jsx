@@ -4,32 +4,66 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Save, Copy, Printer, Sparkles, Clock, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Plus, Save, Copy, Printer, Sparkles, Clock, Loader2, AlertCircle, ClipboardList } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from 'date-fns';
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import ScriptPeriod from './ScriptPeriod';
 import PlayPickerPanel from './PlayPickerPanel';
-import AddToGamePlanModal from '@/components/game-plan/AddToGamePlanModal';
 
 export default function ScriptBuilder({ script, onBack, teamId }) {
   const queryClient = useQueryClient();
-
-  // All useState before any useQuery — keeps hook order stable
   const [localScript, setLocalScript] = useState(script);
   const [showPlayPicker, setShowPlayPicker] = useState(false);
   const [targetPeriodId, setTargetPeriodId] = useState(null);
   const [isDirty, setIsDirty] = useState(false);
-  const [localItems, setLocalItems] = useState(null);
-  const [showGamePlanModal, setShowGamePlanModal] = useState(false);
-  const [gamePlanModalPlays, setGamePlanModalPlays] = useState([]);
-  const [gamePlanModalDays, setGamePlanModalDays] = useState([]);
+  const [showPushToGamePlan, setShowPushToGamePlan] = useState(false);
+  const [selectedGamePlanId, setSelectedGamePlanId] = useState('');
+  const [pushingToGamePlan, setPushingToGamePlan] = useState(false);
+
+  const { data: gamePlans = [] } = useQuery({
+    queryKey: ['gamePlans', teamId],
+    queryFn: () => base44.entities.GamePlan.filter({ team_id: teamId }, '-updated_date'),
+    enabled: !!teamId && showPushToGamePlan,
+  });
+
+  const pushToGamePlan = async () => {
+    if (!selectedGamePlanId) return;
+    setPushingToGamePlan(true);
+    const playIds = [...new Set(displayItems.map(i => i.play_id).filter(Boolean))];
+    const sections = await base44.entities.GamePlanSection.filter({ game_plan_id: selectedGamePlanId }, 'order_index');
+    const targetSection = sections[0];
+    if (!targetSection) {
+      toast.error('Game plan has no sections. Open the Call Sheet and initialize sections first.');
+      setPushingToGamePlan(false);
+      return;
+    }
+    const existingItems = await base44.entities.GamePlanItem.filter({ game_plan_section_id: targetSection.id });
+    const existingPlayIds = new Set(existingItems.map(i => i.play_id));
+    const newPlayIds = playIds.filter(id => !existingPlayIds.has(id));
+    await Promise.all(newPlayIds.map((playId, i) =>
+      base44.entities.GamePlanItem.create({
+        game_plan_section_id: targetSection.id,
+        game_plan_id: selectedGamePlanId,
+        play_id: playId,
+        practiced_this_week: true,
+        practiced_days: [script.practice_day?.split('_')[0] || 'practice'],
+        order_index: existingItems.length + i,
+      })
+    ));
+    toast.success(`${newPlayIds.length} play${newPlayIds.length !== 1 ? 's' : ''} pushed to game plan`);
+    setPushingToGamePlan(false);
+    setShowPushToGamePlan(false);
+  };
 
   const { data: items = [], isLoading: itemsLoading } = useQuery({
     queryKey: ['scriptItems', script.id],
     queryFn: () => base44.entities.PracticeScriptItem.filter({ practice_script_id: script.id }, 'order_index'),
   });
 
+  const [localItems, setLocalItems] = useState(null);
   const displayItems = localItems ?? items;
 
   const saveMutation = useMutation({
@@ -103,33 +137,6 @@ export default function ScriptBuilder({ script, onBack, teamId }) {
 
   const totalMinutes = displayItems.reduce((sum, i) => sum + (i.duration_minutes || 0), 0);
 
-  // Derive practiced day label from script
-  const practiceDayLabel = script.practice_day
-    ? { monday_install: 'Mon', tuesday_team: 'Tue', wednesday_polish: 'Wed', thursday_walkthrough: 'Thu' }[script.practice_day] || 'Practice'
-    : 'Practice';
-
-  // Handle push to game plan for a period
-  const handleAddToGamePlan = async (item) => {
-    // Collect play_ids from all items in this period (or just from this item if it's a rep)
-    let playsToAdd = [];
-    if (item.play_id) {
-      // Single play rep — fetch play detail
-      playsToAdd = [{ id: item.play_id, play_name: item.period_name }];
-    } else {
-      // Period header — collect all rep sub-items that share this period
-      playsToAdd = displayItems
-        .filter(i => i.period_type === 'rep' && i.play_id)
-        .map(i => ({ id: i.play_id, play_name: i.period_name }));
-    }
-    if (playsToAdd.length === 0) {
-      toast.info('No plays linked to this period yet. Add plays first.');
-      return;
-    }
-    setGamePlanModalPlays(playsToAdd);
-    setGamePlanModalDays([practiceDayLabel]);
-    setShowGamePlanModal(true);
-  };
-
   return (
     <div className="-m-6 flex h-[calc(100vh-64px)] overflow-hidden">
       {/* Main builder */}
@@ -175,8 +182,9 @@ export default function ScriptBuilder({ script, onBack, teamId }) {
                 onClick={() => window.print()}>
                 <Printer className="h-3.5 w-3.5" /> Print
               </Button>
-              <Button variant="outline" size="sm" className="gap-1.5 rounded-lg text-xs h-8 hidden sm:flex">
-                <Copy className="h-3.5 w-3.5" /> Copy
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-lg text-xs h-8 hidden sm:flex"
+                onClick={() => setShowPushToGamePlan(true)}>
+                <ClipboardList className="h-3.5 w-3.5" /> Push to Game Plan
               </Button>
               <Button size="sm" className="gap-1.5 rounded-lg h-8"
                 onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
@@ -252,7 +260,6 @@ export default function ScriptBuilder({ script, onBack, teamId }) {
                     updateItems(next);
                   }}
                   onAddPlay={() => { setTargetPeriodId(item.id || item._tempId); setShowPlayPicker(true); }}
-                  onAddToGamePlan={handleAddToGamePlan}
                 />
               ))}
 
@@ -279,15 +286,6 @@ export default function ScriptBuilder({ script, onBack, teamId }) {
           onClose={() => setShowPlayPicker(false)}
         />
       )}
-
-      {/* Add to Game Plan modal */}
-      <AddToGamePlanModal
-        open={showGamePlanModal}
-        onClose={() => setShowGamePlanModal(false)}
-        teamId={teamId}
-        plays={gamePlanModalPlays}
-        practicedDays={gamePlanModalDays}
-      />
     </div>
   );
 }

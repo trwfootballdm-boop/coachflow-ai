@@ -10,27 +10,21 @@
       "type": "string",
       "description": "Section label e.g. Openers, Red Zone, 3rd & Short"
     },
-    "section_key": {
+    "section_type": {
       "type": "string",
-      "description": "Machine key e.g. openers, red_zone, third_short"
-    },
-    "side_of_ball": {
-      "type": "string",
-      "enum": [
-        "offense",
-        "defense",
-        "special_teams"
-      ],
-      "default": "offense"
+      "description": "Situational type e.g. openers, red_zone, third_short, goal_line, two_minute"
     },
     "order_index": {
       "type": "integer",
-      "description": "Display order"
+      "description": "Display order within the game plan"
+    },
+    "notes": {
+      "type": "string"
     }
   },
   "required": [
     "game_plan_id",
     "section_name",
-    "section_key"
+    "section_type"
   ]
 }
