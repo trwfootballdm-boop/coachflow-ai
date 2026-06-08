@@ -1,9 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { BookMarked, NotebookPen, UserRound, X } from 'lucide-react';
-import { usePlayLibraryStore, playLibraryStore } from '@/lib/football-engine/playLibraryStore.js';
+import { playLibraryStore, usePlayLibraryStore } from '@/lib/football-engine/playLibraryStore.js';
 
-export default function PlayDetailDrawer({ open, onClose, conceptId, callId }) {
+export default function PlayDetailDrawer({ conceptId, callId, open, onClose }) {
   const state = usePlayLibraryStore();
 
   const concept = useMemo(
@@ -16,16 +16,20 @@ export default function PlayDetailDrawer({ open, onClose, conceptId, callId }) {
     [callId, state.calls]
   );
 
-  const [description, setDescription] = useState(concept?.description ?? '');
+  const [description, setDescription] = useState('');
   const [conceptNotes, setConceptNotes] = useState('');
-  const [callNotes, setCallNotes] = useState(call?.notes ?? '');
-  const [callDetailNotes, setCallDetailNotes] = useState(call?.detailNotes ?? '');
-  const [callActivation, setCallActivation] = useState(call?.activation ?? 'library');
-  const [playerFitNotes, setPlayerFitNotes] = useState('');
-  const [formationsInput, setFormationsInput] = useState(concept?.formations?.join(', ') ?? '');
-  const [tagsInput, setTagsInput] = useState(concept?.tags?.join(', ') ?? '');
-  const [complementsInput, setComplementsInput] = useState(concept?.complements?.join(', ') ?? '');
-  const [teachingPointsInput, setTeachingPointsInput] = useState(concept?.teachingPoints?.join('\n') ?? '');
+  const [formationsInput, setFormationsInput] = useState('');
+  const [motionsInput, setMotionsInput] = useState('');
+  const [tagsInput, setTagsInput] = useState('');
+  const [situationsInput, setSituationsInput] = useState('');
+  const [bestVsInput, setBestVsInput] = useState('');
+  const [complementsInput, setComplementsInput] = useState('');
+  const [teachingPointsInput, setTeachingPointsInput] = useState('');
+
+  const [callNotes, setCallNotes] = useState('');
+  const [callDetailNotes, setCallDetailNotes] = useState('');
+  const [callActivation, setCallActivation] = useState('library');
+
   const [featuredPlayersInput, setFeaturedPlayersInput] = useState('');
   const [preferredBallCarrier, setPreferredBallCarrier] = useState('');
   const [preferredTarget, setPreferredTarget] = useState('');
@@ -34,11 +38,92 @@ export default function PlayDetailDrawer({ open, onClose, conceptId, callId }) {
   const [avoidPlayer, setAvoidPlayer] = useState('');
   const [matchupNotes, setMatchupNotes] = useState('');
 
+  useEffect(() => {
+    if (!concept || !open) return;
+
+    setDescription(concept.description ?? '');
+    setConceptNotes(concept.detailNotes ?? '');
+    setFormationsInput((concept.formations ?? []).join(', '));
+    setMotionsInput((concept.motions ?? []).join(', '));
+    setTagsInput((concept.tags ?? []).join(', '));
+    setSituationsInput((concept.situations ?? []).join(', '));
+    setBestVsInput((concept.bestVs ?? []).join(', '));
+    setComplementsInput((concept.complements ?? []).join(', '));
+    setTeachingPointsInput((concept.teachingPoints ?? []).join('\n'));
+  }, [concept, open]);
+
+  useEffect(() => {
+    if (!call || !open) {
+      setCallNotes('');
+      setCallDetailNotes('');
+      setCallActivation('library');
+      setFeaturedPlayersInput('');
+      setPreferredBallCarrier('');
+      setPreferredTarget('');
+      setReadKey('');
+      setAttackPlayer('');
+      setAvoidPlayer('');
+      setMatchupNotes('');
+      return;
+    }
+
+    setCallNotes(call.notes ?? '');
+    setCallDetailNotes(call.detailNotes ?? '');
+    setCallActivation(call.activation === 'archived' ? 'library' : call.activation);
+    setFeaturedPlayersInput((call.playerFitNotes?.featuredPlayers ?? []).join(', '));
+    setPreferredBallCarrier(call.playerFitNotes?.preferredBallCarrier ?? '');
+    setPreferredTarget(call.playerFitNotes?.preferredTarget ?? '');
+    setReadKey(call.playerFitNotes?.readKey ?? '');
+    setAttackPlayer(call.playerFitNotes?.attackPlayer ?? '');
+    setAvoidPlayer(call.playerFitNotes?.avoidPlayer ?? '');
+    setMatchupNotes(call.playerFitNotes?.matchupNotes ?? '');
+  }, [call, open]);
+
   if (!open || !concept) return null;
+
+  const handleSave = () => {
+    playLibraryStore.updateConcept(concept.id, {
+      description: description.trim(),
+      detailNotes: conceptNotes.trim(),
+      formations: parseCsv(formationsInput),
+      motions: parseCsv(motionsInput),
+      tags: parseCsv(tagsInput),
+      situations: parseCsv(situationsInput),
+      bestVs: parseCsv(bestVsInput),
+      complements: parseCsv(complementsInput),
+      teachingPoints: parseLines(teachingPointsInput),
+    });
+
+    if (call) {
+      playLibraryStore.updateCall(call.id, {
+        notes: callNotes.trim(),
+        detailNotes: callDetailNotes.trim(),
+        activation: callActivation,
+      });
+
+      playLibraryStore.updatePlayerFitNotes(call.id, {
+        featuredPlayers: parseCsv(featuredPlayersInput),
+        preferredBallCarrier: preferredBallCarrier.trim(),
+        preferredTarget: preferredTarget.trim(),
+        readKey: readKey.trim(),
+        attackPlayer: attackPlayer.trim(),
+        avoidPlayer: avoidPlayer.trim(),
+        matchupNotes: matchupNotes.trim(),
+      });
+    }
+
+    onClose();
+  };
+
+  const handlePromote = () => {
+    if (!call) return;
+    playLibraryStore.promoteCallToCallsheet(call.id);
+    setCallActivation('callsheet');
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/30 backdrop-blur-sm">
-      <div className="flex h-full w-full max-w-[560px] flex-col border-l border-border bg-background shadow-2xl">
+      <div className="flex h-full w-full max-w-[620px] flex-col border-l border-border bg-background shadow-2xl">
         <header className="flex items-start justify-between border-b border-border px-5 py-4">
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
@@ -65,7 +150,7 @@ export default function PlayDetailDrawer({ open, onClose, conceptId, callId }) {
           <DrawerSection
             icon={BookMarked}
             title="Concept metadata"
-            subtitle="Edit description, complements, and teaching language"
+            subtitle="Edit concept description, tags, situations, and teaching language"
           >
             <label className="block">
               <FieldLabel label="Description" />
@@ -78,7 +163,7 @@ export default function PlayDetailDrawer({ open, onClose, conceptId, callId }) {
             </label>
 
             <label className="block">
-              <FieldLabel label="Teaching notes" />
+              <FieldLabel label="Concept notes" />
               <textarea
                 value={conceptNotes}
                 onChange={(e) => setConceptNotes(e.target.value)}
@@ -89,38 +174,50 @@ export default function PlayDetailDrawer({ open, onClose, conceptId, callId }) {
             </label>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <EditableTagField label="Formations" value={formationsInput} onChange={setFormationsInput} />
-              <EditableTagField label="Tags" value={tagsInput} onChange={setTagsInput} />
-              <TagField label="Situations" values={concept.situations} />
-              <EditableTagField label="Complements" value={complementsInput} onChange={setComplementsInput} />
+              <EditableField label="Formations (comma separated)" value={formationsInput} onChange={setFormationsInput} />
+              <EditableField label="Motions (comma separated)" value={motionsInput} onChange={setMotionsInput} />
+              <EditableField label="Tags (comma separated)" value={tagsInput} onChange={setTagsInput} />
+              <EditableField label="Situations (comma separated)" value={situationsInput} onChange={setSituationsInput} />
+              <EditableField label="Best vs (comma separated)" value={bestVsInput} onChange={setBestVsInput} />
+              <EditableField label="Complements (comma separated)" value={complementsInput} onChange={setComplementsInput} />
             </div>
+
+            <label className="block">
+              <FieldLabel label="Teaching points (one per line)" />
+              <textarea
+                value={teachingPointsInput}
+                onChange={(e) => setTeachingPointsInput(e.target.value)}
+                rows={5}
+                className={inputClass}
+              />
+            </label>
           </DrawerSection>
 
           <DrawerSection
             icon={NotebookPen}
             title="Call notes"
-            subtitle="Exact wording and execution reminders"
+            subtitle="Save exact call reminders and weekly activation state"
           >
             {call ? (
               <>
                 <label className="block">
-                  <FieldLabel label="Call notes" />
+                  <FieldLabel label="Short note" />
                   <textarea
                     value={callNotes}
                     onChange={(e) => setCallNotes(e.target.value)}
-                    rows={5}
-                    placeholder="Hash, cadence, alert, tendency breaker, or scout look..."
+                    rows={3}
+                    placeholder="Hash, cadence, alert, tendency breaker..."
                     className={inputClass}
                   />
                 </label>
 
                 <label className="block">
-                  <FieldLabel label="Detail notes" />
+                  <FieldLabel label="Detailed note" />
                   <textarea
                     value={callDetailNotes}
                     onChange={(e) => setCallDetailNotes(e.target.value)}
-                    rows={3}
-                    placeholder="Alert, hash preference, or execution reminder..."
+                    rows={4}
+                    placeholder="Scout look, if/then reminder, setup note, second-half reminder..."
                     className={inputClass}
                   />
                 </label>
@@ -129,7 +226,30 @@ export default function PlayDetailDrawer({ open, onClose, conceptId, callId }) {
                   <ReadOnlyField label="Formation" value={call.formation} />
                   <ReadOnlyField label="Personnel" value={call.personnel} />
                   <ReadOnlyField label="Motion" value={call.motion || 'None'} />
-                  <SelectField label="Activation" value={callActivation} onChange={setCallActivation} options={['library', 'weekly_candidate', 'installed', 'practiced', 'callsheet']} />
+                  <div className="rounded-xl border border-border bg-background/50 px-3 py-3">
+                    <FieldLabel label="Activation" />
+                    <select
+                      value={callActivation}
+                      onChange={(e) => setCallActivation(e.target.value)}
+                      className={cn(inputClass, 'min-h-0')}
+                    >
+                      <option value="library">Library</option>
+                      <option value="weekly_candidate">Weekly</option>
+                      <option value="installed">Installed</option>
+                      <option value="practiced">Practiced</option>
+                      <option value="callsheet">Call Sheet</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePromote}
+                    className="rounded-xl border border-primary/30 bg-primary/12 px-3 py-2 text-sm font-medium text-primary transition-opacity hover:opacity-90"
+                  >
+                    Promote to Call Sheet
+                  </button>
                 </div>
               </>
             ) : (
@@ -142,23 +262,27 @@ export default function PlayDetailDrawer({ open, onClose, conceptId, callId }) {
           <DrawerSection
             icon={UserRound}
             title="Player-fit notes"
-            subtitle="Who should touch it, who should read it, who to attack"
+            subtitle="Track who should carry it, catch it, read it, attack, or avoid"
           >
+            <div className="grid gap-3 md:grid-cols-2">
+              <EditableField label="Featured players" value={featuredPlayersInput} onChange={setFeaturedPlayersInput} />
+              <EditableField label="Preferred ball carrier" value={preferredBallCarrier} onChange={setPreferredBallCarrier} />
+              <EditableField label="Preferred target" value={preferredTarget} onChange={setPreferredTarget} />
+              <EditableField label="Read key" value={readKey} onChange={setReadKey} />
+              <EditableField label="Attack player" value={attackPlayer} onChange={setAttackPlayer} />
+              <EditableField label="Avoid player" value={avoidPlayer} onChange={setAvoidPlayer} />
+            </div>
+
             <label className="block">
-              <FieldLabel label="Player / matchup notes" />
+              <FieldLabel label="Matchup notes" />
               <textarea
-                value={playerFitNotes}
-                onChange={(e) => setPlayerFitNotes(e.target.value)}
-                rows={5}
-                placeholder="Best ballcarrier, preferred receiver, read key, defender to attack, defender to avoid..."
+                value={matchupNotes}
+                onChange={(e) => setMatchupNotes(e.target.value)}
+                rows={4}
+                placeholder="Best matchup condition, leverage, field/boundary preference, or personnel reminder..."
                 className={inputClass}
               />
             </label>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <ReadOnlyField label="Best vs" value={concept.bestVs.join(', ')} />
-              <ReadOnlyField label="Core concept" value={concept.core ? 'Yes' : 'No'} />
-            </div>
           </DrawerSection>
         </div>
 
@@ -172,36 +296,7 @@ export default function PlayDetailDrawer({ open, onClose, conceptId, callId }) {
           </button>
           <button
             type="button"
-            onClick={() => {
-              playLibraryStore.updateConcept(concept.id, {
-                description,
-                detailNotes: conceptNotes,
-                formations: parseCsv(formationsInput),
-                tags: parseCsv(tagsInput),
-                complements: parseCsv(complementsInput),
-                teachingPoints: parseLines(teachingPointsInput),
-              });
-
-              if (call) {
-                playLibraryStore.updateCall(call.id, {
-                  notes: callNotes,
-                  detailNotes: callDetailNotes,
-                  activation: callActivation,
-                });
-
-                playLibraryStore.updatePlayerFitNotes(call.id, {
-                  featuredPlayers: parseCsv(featuredPlayersInput),
-                  preferredBallCarrier,
-                  preferredTarget,
-                  readKey,
-                  attackPlayer,
-                  avoidPlayer,
-                  matchupNotes,
-                });
-              }
-
-              onClose();
-            }}
+            onClick={handleSave}
             className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
           >
             Save changes
@@ -226,7 +321,6 @@ function DrawerSection({ icon: Icon, title, subtitle, children }) {
           ) : null}
         </div>
       </div>
-
       <div className="mt-4 space-y-4">{children}</div>
     </section>
   );
@@ -240,21 +334,16 @@ function FieldLabel({ label }) {
   );
 }
 
-function TagField({ label, values }) {
+function EditableField({ label, value, onChange }) {
   return (
-    <div className="rounded-xl border border-border bg-background/50 px-3 py-3">
+    <label className="block">
       <FieldLabel label={label} />
-      <div className="flex flex-wrap gap-2">
-        {values.map((value) => (
-          <span
-            key={value}
-            className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent-foreground"
-          >
-            {value}
-          </span>
-        ))}
-      </div>
-    </div>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={inputClass}
+      />
+    </label>
   );
 }
 
@@ -267,46 +356,19 @@ function ReadOnlyField({ label, value }) {
   );
 }
 
-function EditableTagField({ label, value, onChange }) {
-  return (
-    <div className="rounded-xl border border-border bg-background/50 px-3 py-3">
-      <FieldLabel label={label} />
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Comma-separated values"
-        className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring"
-      />
-    </div>
-  );
+function parseCsv(input) {
+  return input
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
-function SelectField({ label, value, onChange, options }) {
-  return (
-    <div className="rounded-xl border border-border bg-background/50 px-3 py-3">
-      <FieldLabel label={label} />
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring"
-      >
-        {options.map((opt) => (
-          <option key={opt} value={opt}>{opt}</option>
-        ))}
-      </select>
-    </div>
-  );
+function parseLines(input) {
+  return input
+    .split('\n')
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 const inputClass =
   'w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-ring focus:ring-2 focus:ring-ring/20';
-
-function parseCsv(value) {
-  if (!value) return [];
-  return value.split(',').map((s) => s.trim()).filter(Boolean);
-}
-
-function parseLines(value) {
-  if (!value) return [];
-  return value.split('\n').map((s) => s.trim()).filter(Boolean);
-}
