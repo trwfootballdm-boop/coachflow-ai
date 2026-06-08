@@ -6,17 +6,13 @@
       "type": "string",
       "description": "Reference to Team"
     },
-    "opponent_report_id": {
-      "type": "string",
-      "description": "Reference to OpponentReport (optional)"
-    },
     "title": {
       "type": "string",
       "description": "Game plan title e.g. Week 3 vs Eagles"
     },
     "opponent_name": {
       "type": "string",
-      "description": "Opponent name (denormalized for quick display)"
+      "description": "Opponent name"
     },
     "game_date": {
       "type": "string",
@@ -35,44 +31,44 @@
       ],
       "default": "draft"
     },
-    "play_ids": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Array of Play IDs included in this game plan"
-    },
-    "opener_play_ids": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Play IDs for the opening script"
-    },
-    "red_zone_play_ids": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Play IDs for red zone package"
-    },
-    "two_minute_play_ids": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Play IDs for two-minute drill"
-    },
-    "goal_line_play_ids": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Play IDs for goal line package"
-    },
-    "generated_by_ai": {
-      "type": "boolean",
-      "default": false
+    "call_sheet": {
+      "type": "object",
+      "description": "Call sheet sections keyed by section_key. Each value is an array of play entry objects.",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "play_id": {
+              "type": "string"
+            },
+            "call_sheet_priority": {
+              "type": "integer"
+            },
+            "situational_role": {
+              "type": "string"
+            },
+            "is_opener": {
+              "type": "boolean"
+            },
+            "opener_sequence": {
+              "type": "integer"
+            },
+            "practiced_this_week": {
+              "type": "boolean"
+            },
+            "practiced_day": {
+              "type": "string"
+            },
+            "coach_note": {
+              "type": "string"
+            },
+            "order_index": {
+              "type": "integer"
+            }
+          }
+        }
+      }
     },
     "notes": {
       "type": "string"

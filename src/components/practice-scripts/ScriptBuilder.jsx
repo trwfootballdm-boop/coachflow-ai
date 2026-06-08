@@ -5,13 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Plus, Save, Copy, Printer, Sparkles, Clock, Loader2, AlertCircle, ClipboardList } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from 'date-fns';
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import ScriptPeriod from './ScriptPeriod';
 import PlayPickerPanel from './PlayPickerPanel';
+
+const CALL_SHEET_SECTION_KEYS = [
+  ['openers', 'Openers'], ['base_run', 'Base Runs'], ['base_pass', 'Base Passes'],
+  ['third_short', '3rd & Short'], ['third_medium', '3rd & Medium'], ['third_long', '3rd & Long'],
+  ['red_zone', 'Red Zone'], ['goal_line', 'Goal Line'], ['backed_up', 'Backed Up'],
+  ['two_point', '2-Point'], ['shot_plays', 'Shot Plays'], ['specials', 'Specials'],
+  ['two_minute', 'End of Half / 2-Min'], ['clock_kill', 'Clock Kill'],
+];
 
 export default function ScriptBuilder({ script, onBack, teamId }) {
   const queryClient = useQueryClient();
@@ -19,44 +27,8 @@ export default function ScriptBuilder({ script, onBack, teamId }) {
   const [showPlayPicker, setShowPlayPicker] = useState(false);
   const [targetPeriodId, setTargetPeriodId] = useState(null);
   const [isDirty, setIsDirty] = useState(false);
-  const [showPushToGamePlan, setShowPushToGamePlan] = useState(false);
-  const [selectedGamePlanId, setSelectedGamePlanId] = useState('');
-  const [pushingToGamePlan, setPushingToGamePlan] = useState(false);
-
-  const { data: gamePlans = [] } = useQuery({
-    queryKey: ['gamePlans', teamId],
-    queryFn: () => base44.entities.GamePlan.filter({ team_id: teamId }, '-updated_date'),
-    enabled: !!teamId && showPushToGamePlan,
-  });
-
-  const pushToGamePlan = async () => {
-    if (!selectedGamePlanId) return;
-    setPushingToGamePlan(true);
-    const playIds = [...new Set(displayItems.map(i => i.play_id).filter(Boolean))];
-    const sections = await base44.entities.GamePlanSection.filter({ game_plan_id: selectedGamePlanId }, 'order_index');
-    const targetSection = sections[0];
-    if (!targetSection) {
-      toast.error('Game plan has no sections. Open the Call Sheet and initialize sections first.');
-      setPushingToGamePlan(false);
-      return;
-    }
-    const existingItems = await base44.entities.GamePlanItem.filter({ game_plan_section_id: targetSection.id });
-    const existingPlayIds = new Set(existingItems.map(i => i.play_id));
-    const newPlayIds = playIds.filter(id => !existingPlayIds.has(id));
-    await Promise.all(newPlayIds.map((playId, i) =>
-      base44.entities.GamePlanItem.create({
-        game_plan_section_id: targetSection.id,
-        game_plan_id: selectedGamePlanId,
-        play_id: playId,
-        practiced_this_week: true,
-        practiced_days: [script.practice_day?.split('_')[0] || 'practice'],
-        order_index: existingItems.length + i,
-      })
-    ));
-    toast.success(`${newPlayIds.length} play${newPlayIds.length !== 1 ? 's' : ''} pushed to game plan`);
-    setPushingToGamePlan(false);
-    setShowPushToGamePlan(false);
-  };
+  const [pushItem, setPushItem] = useState(null); // item being pushed to game plan
+  const [pushSection, setPushSection] = useState('openers');
 
   const { data: items = [], isLoading: itemsLoading } = useQuery({
     queryKey: ['scriptItems', script.id],
@@ -137,6 +109,31 @@ export default function ScriptBuilder({ script, onBack, teamId }) {
 
   const totalMinutes = displayItems.reduce((sum, i) => sum + (i.duration_minutes || 0), 0);
 
+  const { data: gamePlans = [] } = useQuery({
+    queryKey: ['gamePlans', teamId],
+    queryFn: () => base44.entities.GamePlan.filter({ team_id: teamId }, '-updated_date'),
+    enabled: !!teamId,
+  });
+
+  const [pushGamePlanId, setPushGamePlanId] = useState('');
+
+  const pushToGamePlanMutation = useMutation({
+    mutationFn: async ({ item, sectionKey, gamePlanId }) => {
+      const planId = gamePlanId || (gamePlans[0]?.id);
+      if (!planId || !item.play_id) return;
+      // Fetch the current plan, append entry to the section, then save
+      const plan = await base44.entities.GamePlan.get(planId);
+      const callSheet = plan.call_sheet || {};
+      const section = callSheet[sectionKey] || [];
+      const entry = { play_id: item.play_id, call_sheet_priority: 3, practiced_this_week: true, order_index: section.length };
+      await base44.entities.GamePlan.update(planId, { call_sheet: { ...callSheet, [sectionKey]: [...section, entry] } });
+    },
+    onSuccess: () => {
+      toast.success('Play pushed to call sheet');
+      setPushItem(null);
+    },
+  });
+
   return (
     <div className="-m-6 flex h-[calc(100vh-64px)] overflow-hidden">
       {/* Main builder */}
@@ -182,9 +179,8 @@ export default function ScriptBuilder({ script, onBack, teamId }) {
                 onClick={() => window.print()}>
                 <Printer className="h-3.5 w-3.5" /> Print
               </Button>
-              <Button variant="outline" size="sm" className="gap-1.5 rounded-lg text-xs h-8 hidden sm:flex"
-                onClick={() => setShowPushToGamePlan(true)}>
-                <ClipboardList className="h-3.5 w-3.5" /> Push to Game Plan
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-lg text-xs h-8 hidden sm:flex">
+                <Copy className="h-3.5 w-3.5" /> Copy
               </Button>
               <Button size="sm" className="gap-1.5 rounded-lg h-8"
                 onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
@@ -260,6 +256,7 @@ export default function ScriptBuilder({ script, onBack, teamId }) {
                     updateItems(next);
                   }}
                   onAddPlay={() => { setTargetPeriodId(item.id || item._tempId); setShowPlayPicker(true); }}
+                  onPushToGamePlan={(it) => { setPushItem(it); setPushSection('openers'); setPushGamePlanId(gamePlans[0]?.id || ''); }}
                 />
               ))}
 
@@ -288,40 +285,52 @@ export default function ScriptBuilder({ script, onBack, teamId }) {
       )}
 
       {/* Push to Game Plan dialog */}
-      <Dialog open={showPushToGamePlan} onOpenChange={setShowPushToGamePlan}>
-        <DialogContent>
+      <Dialog open={!!pushItem} onOpenChange={(o) => !o && setPushItem(null)}>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-display">Push Plays to Game Plan</DialogTitle>
+            <DialogTitle className="font-display text-base">Push to Call Sheet</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
-            <p className="text-sm text-muted-foreground">
-              All plays in this script ({[...new Set(displayItems.map(i => i.play_id).filter(Boolean))].length} plays) will be added to the selected game plan's first section and marked as practiced.
-            </p>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground block mb-1.5">Select Game Plan</label>
-              <Select value={selectedGamePlanId} onValueChange={setSelectedGamePlanId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a game plan…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {gamePlans.map(gp => (
-                    <SelectItem key={gp.id} value={gp.id}>
-                      {gp.title}{gp.opponent_name ? ` — vs ${gp.opponent_name}` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setShowPushToGamePlan(false)}>
-                Cancel
-              </Button>
-              <Button className="flex-1 gap-1.5" onClick={pushToGamePlan}
-                disabled={!selectedGamePlanId || pushingToGamePlan}>
-                {pushingToGamePlan ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
-                Push Plays
-              </Button>
-            </div>
+            {gamePlans.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No game plans found. Create a game plan first.</p>
+            ) : (
+              <>
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Game Plan</label>
+                  <Select value={pushGamePlanId} onValueChange={setPushGamePlanId}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder="Select game plan..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {gamePlans.map(gp => (
+                        <SelectItem key={gp.id} value={gp.id}>{gp.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Call Sheet Section</label>
+                  <Select value={pushSection} onValueChange={setPushSection}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CALL_SHEET_SECTION_KEYS.map(([k, l]) => (
+                        <SelectItem key={k} value={k}>{l}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  className="w-full gap-2"
+                  disabled={!pushGamePlanId || pushToGamePlanMutation.isPending}
+                  onClick={() => pushToGamePlanMutation.mutate({ item: pushItem, sectionKey: pushSection, gamePlanId: pushGamePlanId })}
+                >
+                  {pushToGamePlanMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
+                  Add to Call Sheet
+                </Button>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
