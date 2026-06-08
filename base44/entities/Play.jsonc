@@ -1,0 +1,112 @@
+{
+  "name": "Play",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "name": {
+      "type": "string",
+      "description": "Play name e.g. Jet Sweep Right"
+    },
+    "play_type": {
+      "type": "string",
+      "enum": [
+        "run",
+        "pass",
+        "screen",
+        "play_action",
+        "rpo",
+        "trick",
+        "special_teams"
+      ],
+      "description": "Type of play"
+    },
+    "side": {
+      "type": "string",
+      "enum": [
+        "offense",
+        "defense",
+        "special_teams"
+      ],
+      "description": "Which side of the ball"
+    },
+    "formation": {
+      "type": "string",
+      "description": "Formation name e.g. Shotgun Trips Right"
+    },
+    "concept": {
+      "type": "string",
+      "description": "Play concept e.g. Inside Zone, Curl Flat"
+    },
+    "personnel": {
+      "type": "string",
+      "description": "Personnel grouping e.g. 11, 12, 21, 22"
+    },
+    "hash": {
+      "type": "string",
+      "enum": [
+        "left",
+        "middle",
+        "right",
+        "any"
+      ],
+      "default": "any",
+      "description": "Best hash mark"
+    },
+    "down_distance": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Best down and distance situations"
+    },
+    "field_zone": {
+      "type": "string",
+      "enum": [
+        "backed_up",
+        "own_territory",
+        "midfield",
+        "red_zone",
+        "goal_line",
+        "any"
+      ],
+      "default": "any",
+      "description": "Best field zone"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Custom tags for filtering"
+    },
+    "diagram_data": {
+      "type": "object",
+      "description": "JSON data for play diagram (player positions, routes, assignments)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Coach notes about the play"
+    },
+    "is_favorite": {
+      "type": "boolean",
+      "default": false,
+      "description": "Marked as favorite"
+    },
+    "install_week": {
+      "type": "number",
+      "description": "Week number when play was installed"
+    },
+    "thumbnail_url": {
+      "type": "string",
+      "description": "URL to play diagram thumbnail"
+    }
+  },
+  "required": [
+    "team_id",
+    "name",
+    "side"
+  ]
+}

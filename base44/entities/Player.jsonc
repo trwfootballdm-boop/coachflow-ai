@@ -1,0 +1,54 @@
+{
+  "name": "Player",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "first_name": {
+      "type": "string"
+    },
+    "last_name": {
+      "type": "string"
+    },
+    "number": {
+      "type": "number",
+      "description": "Jersey number"
+    },
+    "position": {
+      "type": "string",
+      "description": "Primary position e.g. QB, RB, WR"
+    },
+    "secondary_position": {
+      "type": "string",
+      "description": "Secondary position"
+    },
+    "grade": {
+      "type": "string",
+      "description": "Grade level"
+    },
+    "height": {
+      "type": "string"
+    },
+    "weight": {
+      "type": "number"
+    },
+    "depth": {
+      "type": "number",
+      "description": "Depth chart position (1=starter)"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "team_id",
+    "first_name",
+    "last_name"
+  ]
+}

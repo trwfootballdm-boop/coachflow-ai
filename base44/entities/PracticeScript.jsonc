@@ -1,0 +1,68 @@
+{
+  "name": "PracticeScript",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "title": {
+      "type": "string",
+      "description": "Script title e.g. Tuesday Install Period"
+    },
+    "practice_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "period_type": {
+      "type": "string",
+      "enum": [
+        "install",
+        "team_run",
+        "team_pass",
+        "red_zone",
+        "two_minute",
+        "goal_line",
+        "special_teams",
+        "walkthrough",
+        "custom"
+      ],
+      "description": "Type of practice period"
+    },
+    "play_sequence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "play_id": {
+            "type": "string"
+          },
+          "rep_number": {
+            "type": "number"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "down_distance": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Ordered sequence of plays with rep details"
+    },
+    "duration_minutes": {
+      "type": "number",
+      "description": "Duration of period in minutes"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "team_id",
+    "title"
+  ]
+}

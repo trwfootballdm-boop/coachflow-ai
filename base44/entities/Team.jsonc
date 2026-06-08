@@ -1,0 +1,79 @@
+{
+  "name": "Team",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Team name"
+    },
+    "level": {
+      "type": "string",
+      "enum": [
+        "youth",
+        "middle_school",
+        "high_school",
+        "club"
+      ],
+      "description": "Competition level"
+    },
+    "season": {
+      "type": "string",
+      "description": "Current season e.g. Fall 2024"
+    },
+    "mascot": {
+      "type": "string",
+      "description": "Team mascot"
+    },
+    "primary_color": {
+      "type": "string",
+      "description": "Primary team color hex"
+    },
+    "secondary_color": {
+      "type": "string",
+      "description": "Secondary team color hex"
+    },
+    "offensive_system": {
+      "type": "string",
+      "enum": [
+        "spread",
+        "pro_style",
+        "wing_t",
+        "flexbone",
+        "pistol",
+        "single_wing",
+        "i_formation",
+        "shotgun",
+        "custom"
+      ],
+      "description": "Offensive system"
+    },
+    "defensive_system": {
+      "type": "string",
+      "enum": [
+        "4-3",
+        "3-4",
+        "4-2-5",
+        "3-3-5",
+        "5-3",
+        "6-2",
+        "46",
+        "cover_3",
+        "custom"
+      ],
+      "description": "Defensive system"
+    },
+    "upcoming_opponent": {
+      "type": "string",
+      "description": "Next opponent name"
+    },
+    "next_game_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Next game date"
+    }
+  },
+  "required": [
+    "name",
+    "level"
+  ]
+}

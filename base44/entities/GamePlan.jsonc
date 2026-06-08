@@ -1,0 +1,68 @@
+{
+  "name": "GamePlan",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "title": {
+      "type": "string",
+      "description": "Game plan title e.g. Week 3 vs Eagles"
+    },
+    "opponent": {
+      "type": "string",
+      "description": "Opponent name"
+    },
+    "game_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Game date"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "in_progress",
+        "finalized"
+      ],
+      "default": "draft"
+    },
+    "play_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Plays included in game plan"
+    },
+    "openers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Opening script play IDs"
+    },
+    "red_zone_plays": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Red zone play IDs"
+    },
+    "two_minute_plays": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Two minute drill play IDs"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Game plan notes"
+    }
+  },
+  "required": [
+    "team_id",
+    "title"
+  ]
+}
