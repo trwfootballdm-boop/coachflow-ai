@@ -6,18 +6,25 @@
       "type": "string",
       "description": "Reference to Team"
     },
+    "opponent_report_id": {
+      "type": "string",
+      "description": "Reference to OpponentReport (optional)"
+    },
     "title": {
       "type": "string",
       "description": "Game plan title e.g. Week 3 vs Eagles"
     },
-    "opponent": {
+    "opponent_name": {
       "type": "string",
-      "description": "Opponent name"
+      "description": "Opponent name (denormalized for quick display)"
     },
     "game_date": {
       "type": "string",
-      "format": "date",
-      "description": "Game date"
+      "format": "date"
+    },
+    "week_label": {
+      "type": "string",
+      "description": "Week label e.g. Week 1, Playoffs"
     },
     "status": {
       "type": "string",
@@ -33,32 +40,46 @@
       "items": {
         "type": "string"
       },
-      "description": "Plays included in game plan"
+      "description": "Array of Play IDs included in this game plan"
     },
-    "openers": {
+    "opener_play_ids": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "Opening script play IDs"
+      "description": "Play IDs for the opening script"
     },
-    "red_zone_plays": {
+    "red_zone_play_ids": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "Red zone play IDs"
+      "description": "Play IDs for red zone package"
     },
-    "two_minute_plays": {
+    "two_minute_play_ids": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "Two minute drill play IDs"
+      "description": "Play IDs for two-minute drill"
+    },
+    "goal_line_play_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Play IDs for goal line package"
+    },
+    "generated_by_ai": {
+      "type": "boolean",
+      "default": false
     },
     "notes": {
-      "type": "string",
-      "description": "Game plan notes"
+      "type": "string"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
     }
   },
   "required": [

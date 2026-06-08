@@ -8,7 +8,34 @@
     },
     "name": {
       "type": "string",
-      "description": "Play name e.g. Jet Sweep Right"
+      "description": "Full play name e.g. Inside Zone Left"
+    },
+    "short_name": {
+      "type": "string",
+      "description": "Short call e.g. IZL, 36 Power"
+    },
+    "side": {
+      "type": "string",
+      "enum": [
+        "offense",
+        "defense",
+        "special_teams"
+      ],
+      "description": "Side of ball"
+    },
+    "play_family": {
+      "type": "string",
+      "description": "Play family/series e.g. Zone, Power, Mesh, Cover 2"
+    },
+    "run_pass": {
+      "type": "string",
+      "enum": [
+        "run",
+        "pass",
+        "rpo",
+        "special_teams"
+      ],
+      "description": "Run/pass designation"
     },
     "play_type": {
       "type": "string",
@@ -21,83 +48,163 @@
         "trick",
         "special_teams"
       ],
-      "description": "Type of play"
-    },
-    "side": {
-      "type": "string",
-      "enum": [
-        "offense",
-        "defense",
-        "special_teams"
-      ],
-      "description": "Which side of the ball"
+      "description": "Detailed play type"
     },
     "formation": {
       "type": "string",
       "description": "Formation name e.g. Shotgun Trips Right"
     },
-    "concept": {
-      "type": "string",
-      "description": "Play concept e.g. Inside Zone, Curl Flat"
-    },
     "personnel": {
       "type": "string",
       "description": "Personnel grouping e.g. 11, 12, 21, 22"
     },
-    "hash": {
+    "motion": {
+      "type": "string",
+      "description": "Pre-snap motion or shift e.g. Jet, Orbit, Shift"
+    },
+    "strength": {
       "type": "string",
       "enum": [
         "left",
-        "middle",
         "right",
+        "field",
+        "boundary",
         "any"
       ],
       "default": "any",
-      "description": "Best hash mark"
+      "description": "Formation strength direction"
     },
-    "down_distance": {
+    "concept": {
+      "type": "string",
+      "description": "Play concept e.g. Inside Zone, Curl Flat"
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "left",
+        "right",
+        "middle",
+        "any"
+      ],
+      "default": "any",
+      "description": "Primary play direction"
+    },
+    "hash_tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "left",
+          "middle",
+          "right",
+          "any"
+        ]
+      },
+      "description": "Best hash mark situations",
+      "default": [
+        "any"
+      ]
+    },
+    "down_distance_tags": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "Best down and distance situations"
+      "description": "Best down and distance situations e.g. 1st-10, 3rd-short, 3rd-medium, 2pt"
     },
-    "field_zone": {
+    "field_zone_tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "backed_up",
+          "own_territory",
+          "midfield",
+          "red_zone",
+          "goal_line",
+          "any"
+        ]
+      },
+      "description": "Best field zones",
+      "default": [
+        "any"
+      ]
+    },
+    "opponent_front_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Good vs opponent fronts e.g. 4-3, 3-4, Bear, Odd, Even"
+    },
+    "coverage_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Good vs coverages e.g. Cover 1, Cover 2, Cover 3, Man, Zone"
+    },
+    "install_day": {
+      "type": "number",
+      "description": "Install day number (1-5+)"
+    },
+    "install_week": {
+      "type": "number",
+      "description": "Install week number"
+    },
+    "age_level_difficulty": {
       "type": "string",
       "enum": [
-        "backed_up",
-        "own_territory",
-        "midfield",
-        "red_zone",
-        "goal_line",
-        "any"
+        "youth",
+        "middle_school",
+        "high_school",
+        "college",
+        "pro"
       ],
-      "default": "any",
-      "description": "Best field zone"
+      "description": "Appropriate age/level difficulty"
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "default": "medium",
+      "description": "Risk level / complexity"
+    },
+    "coaching_points": {
+      "type": "string",
+      "description": "Key coaching points for this play"
+    },
+    "notes": {
+      "type": "string",
+      "description": "General coach notes"
     },
     "tags": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "Custom tags for filtering"
-    },
-    "diagram_data": {
-      "type": "object",
-      "description": "JSON data for play diagram (player positions, routes, assignments)"
-    },
-    "notes": {
-      "type": "string",
-      "description": "Coach notes about the play"
+      "description": "Custom tags"
     },
     "is_favorite": {
       "type": "boolean",
-      "default": false,
-      "description": "Marked as favorite"
+      "default": false
     },
-    "install_week": {
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Active in playbook"
+    },
+    "version": {
       "type": "number",
-      "description": "Week number when play was installed"
+      "default": 1,
+      "description": "Version number"
+    },
+    "diagram_data": {
+      "type": "object",
+      "description": "JSON data for play diagram"
     },
     "thumbnail_url": {
       "type": "string",

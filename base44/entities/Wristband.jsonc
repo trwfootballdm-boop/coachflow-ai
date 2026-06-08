@@ -1,0 +1,49 @@
+{
+  "name": "Wristband",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "game_plan_id": {
+      "type": "string",
+      "description": "Reference to GamePlan"
+    },
+    "title": {
+      "type": "string",
+      "description": "Wristband label e.g. Week 3 Offense"
+    },
+    "columns": {
+      "type": "number",
+      "default": 4,
+      "description": "Number of columns on wristband"
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Section label e.g. RED ZONE, 3RD DOWN"
+          },
+          "play_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Play IDs in this section"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "team_id",
+    "title"
+  ]
+}

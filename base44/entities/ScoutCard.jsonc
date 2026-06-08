@@ -1,0 +1,60 @@
+{
+  "name": "ScoutCard",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "opponent_id": {
+      "type": "string",
+      "description": "Reference to Opponent record"
+    },
+    "title": {
+      "type": "string",
+      "description": "Scout card title/label"
+    },
+    "week_number": {
+      "type": "number"
+    },
+    "card_sequence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "play_id": {
+            "type": "string",
+            "description": "Our play used to simulate opponent look"
+          },
+          "opponent_play_name": {
+            "type": "string",
+            "description": "Opponent play name to label the card"
+          },
+          "formation": {
+            "type": "string",
+            "description": "Opponent formation"
+          },
+          "down_distance": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "tendency_note": {
+            "type": "string"
+          },
+          "rep_number": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "team_id",
+    "title"
+  ]
+}

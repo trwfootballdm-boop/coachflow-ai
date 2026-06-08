@@ -1,0 +1,45 @@
+{
+  "name": "PlayAssignment",
+  "type": "object",
+  "properties": {
+    "play_id": {
+      "type": "string",
+      "description": "Reference to Play"
+    },
+    "position_code": {
+      "type": "string",
+      "description": "Position e.g. QB, FB, WB, TB, LT, LG, C, RG, RT, TE, WR, DE, DT, NG, MLB, CB, S"
+    },
+    "assignment_type": {
+      "type": "string",
+      "description": "Assignment type e.g. block, kickout, pull, fake, route, fill, blitz, contain, handoff, read"
+    },
+    "assignment_text": {
+      "type": "string",
+      "description": "Full assignment description"
+    },
+    "aiming_point": {
+      "type": "string",
+      "description": "Where this player aims e.g. outside hip of guard, front pylon"
+    },
+    "read_key": {
+      "type": "string",
+      "description": "What this player reads to make their decision"
+    },
+    "motion_flag": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this position involves a pre-snap motion"
+    },
+    "order_index": {
+      "type": "integer",
+      "description": "Display order for this assignment in the list"
+    }
+  },
+  "required": [
+    "play_id",
+    "position_code",
+    "assignment_type",
+    "assignment_text"
+  ]
+}

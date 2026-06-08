@@ -1,0 +1,43 @@
+{
+  "name": "PracticeScriptItem",
+  "type": "object",
+  "properties": {
+    "practice_script_id": {
+      "type": "string",
+      "description": "Reference to PracticeScript"
+    },
+    "play_id": {
+      "type": "string",
+      "description": "Reference to Play (optional \u2014 item may be a general period)"
+    },
+    "period_name": {
+      "type": "string",
+      "description": "Name of the practice period e.g. Team Run Period 1, Red Zone"
+    },
+    "period_type": {
+      "type": "string",
+      "description": "Period type e.g. indy, group, team, special_teams, walk_through"
+    },
+    "start_time_label": {
+      "type": "string",
+      "description": "Start time label e.g. 5:00, :15 mark"
+    },
+    "duration_minutes": {
+      "type": "integer",
+      "description": "Duration of this period or play rep in minutes"
+    },
+    "coaching_note": {
+      "type": "string",
+      "description": "Specific coaching note for this item"
+    },
+    "order_index": {
+      "type": "integer",
+      "description": "Sort order within the script"
+    }
+  },
+  "required": [
+    "practice_script_id",
+    "period_name",
+    "order_index"
+  ]
+}

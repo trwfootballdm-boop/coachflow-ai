@@ -1,0 +1,36 @@
+{
+  "name": "PlayTag",
+  "type": "object",
+  "properties": {
+    "play_id": {
+      "type": "string",
+      "description": "Reference to Play"
+    },
+    "tag_type": {
+      "type": "string",
+      "enum": [
+        "down_distance",
+        "field_zone",
+        "front",
+        "coverage",
+        "situation",
+        "install_group",
+        "personnel_matchup"
+      ],
+      "description": "Category of the tag"
+    },
+    "tag_value": {
+      "type": "string",
+      "description": "Tag value e.g. 3rd_short, red_zone, 5_3, cover_0, opener"
+    },
+    "sort_order": {
+      "type": "integer",
+      "description": "Display sort order"
+    }
+  },
+  "required": [
+    "play_id",
+    "tag_type",
+    "tag_value"
+  ]
+}

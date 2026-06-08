@@ -10,17 +10,44 @@
       "type": "string",
       "description": "Opponent team name"
     },
+    "abbreviation": {
+      "type": "string",
+      "description": "Short name e.g. CEN, WF"
+    },
     "game_date": {
       "type": "string",
       "format": "date"
     },
-    "offensive_tendencies": {
+    "location": {
       "type": "string",
-      "description": "Notes on offensive tendencies"
+      "enum": [
+        "home",
+        "away",
+        "neutral"
+      ],
+      "default": "away"
+    },
+    "base_offense": {
+      "type": "string",
+      "description": "Base offensive system e.g. Spread, Pro Style"
+    },
+    "base_defense": {
+      "type": "string",
+      "description": "Base defensive front e.g. 4-3, 3-4, Bear"
+    },
+    "base_coverage": {
+      "type": "string",
+      "description": "Base coverage e.g. Cover 2, Cover 3 Zone"
+    },
+    "offensive_tendencies": {
+      "type": "string"
     },
     "defensive_tendencies": {
+      "type": "string"
+    },
+    "blitz_tendencies": {
       "type": "string",
-      "description": "Notes on defensive tendencies"
+      "description": "Blitz frequency and packages"
     },
     "key_players": {
       "type": "array",
@@ -28,6 +55,9 @@
         "type": "object",
         "properties": {
           "number": {
+            "type": "string"
+          },
+          "name": {
             "type": "string"
           },
           "position": {
@@ -45,12 +75,18 @@
     "weaknesses": {
       "type": "string"
     },
-    "film_urls": {
+    "scout_play_ids": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "Links to game film"
+      "description": "Play IDs from our playbook to use as scout team look"
+    },
+    "film_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "notes": {
       "type": "string"

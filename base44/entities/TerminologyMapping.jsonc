@@ -1,0 +1,48 @@
+{
+  "name": "TerminologyMapping",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "side_of_ball": {
+      "type": "string",
+      "enum": [
+        "offense",
+        "defense",
+        "special_teams"
+      ],
+      "description": "Which side of ball this term applies to"
+    },
+    "standard_concept_name": {
+      "type": "string",
+      "description": "Universal football concept name e.g. inside_zone, cover_2"
+    },
+    "team_term": {
+      "type": "string",
+      "description": "This team's name for the concept e.g. 'Belly', 'Blue'"
+    },
+    "short_code": {
+      "type": "string",
+      "description": "Short code for wristbands or quick scripts e.g. BLY, BL"
+    },
+    "player_label": {
+      "type": "string",
+      "description": "Simplified label used when explaining to young players"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "team_id",
+    "side_of_ball",
+    "standard_concept_name",
+    "team_term"
+  ]
+}

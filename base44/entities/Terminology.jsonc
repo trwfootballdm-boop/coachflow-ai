@@ -1,0 +1,63 @@
+{
+  "name": "Terminology",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "formation",
+        "motion",
+        "route",
+        "protection",
+        "run_concept",
+        "defense_front",
+        "coverage",
+        "blitz",
+        "signal",
+        "custom"
+      ],
+      "description": "Terminology category"
+    },
+    "term": {
+      "type": "string",
+      "description": "The term used by this team"
+    },
+    "standard_name": {
+      "type": "string",
+      "description": "Standard/common name for reference"
+    },
+    "definition": {
+      "type": "string",
+      "description": "Definition or description"
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Other names or codes for this term"
+    },
+    "side": {
+      "type": "string",
+      "enum": [
+        "offense",
+        "defense",
+        "special_teams",
+        "all"
+      ],
+      "default": "offense"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "team_id",
+    "term",
+    "category"
+  ]
+}

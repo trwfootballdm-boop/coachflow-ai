@@ -1,0 +1,43 @@
+{
+  "name": "TeamMembership",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email of the coach/user"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "head_coach",
+        "coordinator",
+        "assistant",
+        "read_only"
+      ],
+      "description": "Role on the team"
+    },
+    "side_of_ball": {
+      "type": "string",
+      "enum": [
+        "offense",
+        "defense",
+        "special_teams",
+        "all"
+      ],
+      "description": "Which side of the ball this coach is responsible for"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "team_id",
+    "user_email",
+    "role"
+  ]
+}

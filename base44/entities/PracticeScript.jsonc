@@ -8,57 +8,36 @@
     },
     "title": {
       "type": "string",
-      "description": "Script title e.g. Tuesday Install Period"
+      "description": "Script title e.g. Week 1 Tuesday Install"
     },
-    "practice_date": {
+    "practice_day": {
       "type": "string",
-      "format": "date"
+      "description": "Practice day label e.g. monday_install, tuesday_team, wednesday_polish, thursday_walkthrough"
     },
-    "period_type": {
+    "script_date": {
       "type": "string",
-      "enum": [
-        "install",
-        "team_run",
-        "team_pass",
-        "red_zone",
-        "two_minute",
-        "goal_line",
-        "special_teams",
-        "walkthrough",
-        "custom"
-      ],
-      "description": "Type of practice period"
+      "format": "date",
+      "description": "Date of the practice"
     },
-    "play_sequence": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "play_id": {
-            "type": "string"
-          },
-          "rep_number": {
-            "type": "number"
-          },
-          "hash": {
-            "type": "string"
-          },
-          "down_distance": {
-            "type": "string"
-          },
-          "notes": {
-            "type": "string"
-          }
-        }
-      },
-      "description": "Ordered sequence of plays with rep details"
+    "focus_area": {
+      "type": "string",
+      "description": "Main focus e.g. red zone, two-minute, base install"
     },
-    "duration_minutes": {
-      "type": "number",
-      "description": "Duration of period in minutes"
+    "coaching_emphasis": {
+      "type": "string",
+      "description": "Key coaching emphasis for this practice"
+    },
+    "generated_by_ai": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this script was AI-generated"
     },
     "notes": {
       "type": "string"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
     }
   },
   "required": [

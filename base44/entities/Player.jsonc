@@ -13,12 +13,12 @@
       "type": "string"
     },
     "number": {
-      "type": "number",
+      "type": "integer",
       "description": "Jersey number"
     },
     "position": {
       "type": "string",
-      "description": "Primary position e.g. QB, RB, WR"
+      "description": "Primary position e.g. QB, RB, WR, TE, C, G, T, DE, DT, LB, CB, S"
     },
     "secondary_position": {
       "type": "string",
@@ -26,22 +26,16 @@
     },
     "grade": {
       "type": "string",
-      "description": "Grade level"
-    },
-    "height": {
-      "type": "string"
-    },
-    "weight": {
-      "type": "number"
+      "description": "Grade level or age group"
     },
     "depth": {
-      "type": "number",
-      "description": "Depth chart position (1=starter)"
+      "type": "integer",
+      "description": "Depth chart position (1 = starter)"
     },
     "notes": {
       "type": "string"
     },
-    "is_active": {
+    "active": {
       "type": "boolean",
       "default": true
     }

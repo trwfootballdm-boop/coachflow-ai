@@ -1,0 +1,35 @@
+{
+  "name": "PlayDiagram",
+  "type": "object",
+  "properties": {
+    "play_id": {
+      "type": "string",
+      "description": "Reference to Play"
+    },
+    "diagram_json": {
+      "type": "object",
+      "description": "Field/canvas data: players, routes, arrows, labels"
+    },
+    "thumbnail_url": {
+      "type": "string",
+      "description": "URL to diagram thumbnail image"
+    },
+    "animation_json": {
+      "type": "object",
+      "description": "Animation keyframes and motion paths"
+    },
+    "version_label": {
+      "type": "string",
+      "description": "Human-readable version label e.g. v1, base, motion_variant"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Latest active diagram is treated as the default"
+    }
+  },
+  "required": [
+    "play_id",
+    "diagram_json"
+  ]
+}

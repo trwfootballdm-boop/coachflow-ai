@@ -1,0 +1,47 @@
+{
+  "name": "Formation",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "side_of_ball": {
+      "type": "string",
+      "enum": [
+        "offense",
+        "defense",
+        "special_teams"
+      ],
+      "description": "Which side of ball this formation belongs to"
+    },
+    "formation_name": {
+      "type": "string",
+      "description": "Formation name e.g. Shotgun 2x2, I-Formation, 4-3 Over"
+    },
+    "formation_family": {
+      "type": "string",
+      "description": "Formation family e.g. base, goal_line, short_yardage, spread, blitz_package"
+    },
+    "strength_call": {
+      "type": "string",
+      "description": "Strength call e.g. left, right, balanced, unbalanced"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "diagram_data": {
+      "type": "object",
+      "description": "Structured player alignment data for the formation canvas"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "team_id",
+    "side_of_ball",
+    "formation_name"
+  ]
+}

@@ -2,78 +2,43 @@
   "name": "Team",
   "type": "object",
   "properties": {
-    "name": {
+    "team_name": {
       "type": "string",
       "description": "Team name"
     },
-    "level": {
+    "age_group": {
       "type": "string",
-      "enum": [
-        "youth",
-        "middle_school",
-        "high_school",
-        "club"
-      ],
-      "description": "Competition level"
+      "description": "Age group e.g. 8U, 10U, 12U, middle_school"
     },
-    "season": {
-      "type": "string",
-      "description": "Current season e.g. Fall 2024"
+    "season_year": {
+      "type": "integer",
+      "description": "Season year e.g. 2025"
     },
-    "mascot": {
+    "league_name": {
       "type": "string",
-      "description": "Team mascot"
-    },
-    "primary_color": {
-      "type": "string",
-      "description": "Primary team color hex"
-    },
-    "secondary_color": {
-      "type": "string",
-      "description": "Secondary team color hex"
+      "description": "League or organization name"
     },
     "offensive_system": {
       "type": "string",
-      "enum": [
-        "spread",
-        "pro_style",
-        "wing_t",
-        "flexbone",
-        "pistol",
-        "single_wing",
-        "i_formation",
-        "shotgun",
-        "custom"
-      ],
-      "description": "Offensive system"
+      "description": "Offensive system e.g. spread, wing_t, pro_style"
     },
     "defensive_system": {
       "type": "string",
-      "enum": [
-        "4-3",
-        "3-4",
-        "4-2-5",
-        "3-3-5",
-        "5-3",
-        "6-2",
-        "46",
-        "cover_3",
-        "custom"
-      ],
-      "description": "Defensive system"
+      "description": "Defensive system e.g. 4-3, 3-4, 5-3"
     },
-    "upcoming_opponent": {
+    "primary_language": {
       "type": "string",
-      "description": "Next opponent name"
+      "default": "English",
+      "description": "Primary language for terminology"
     },
-    "next_game_date": {
-      "type": "string",
-      "format": "date",
-      "description": "Next game date"
+    "active": {
+      "type": "boolean",
+      "default": true
     }
   },
   "required": [
-    "name",
-    "level"
+    "team_name",
+    "age_group",
+    "season_year"
   ]
 }

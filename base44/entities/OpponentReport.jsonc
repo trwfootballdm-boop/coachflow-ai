@@ -1,0 +1,65 @@
+{
+  "name": "OpponentReport",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team (our team)"
+    },
+    "opponent_name": {
+      "type": "string",
+      "description": "Opponent team name"
+    },
+    "week_label": {
+      "type": "string",
+      "description": "Week label e.g. Week 1, Playoffs, Scrimmage"
+    },
+    "game_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the game"
+    },
+    "fronts_seen": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Defensive fronts seen e.g. 5-3, 4-4, 6-2"
+    },
+    "coverages_seen": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Coverages seen e.g. cover_0, cover_2, cover_3"
+    },
+    "strengths": {
+      "type": "string",
+      "description": "Opponent strengths"
+    },
+    "weaknesses": {
+      "type": "string",
+      "description": "Opponent weaknesses"
+    },
+    "tendency_notes": {
+      "type": "string",
+      "description": "Run/pass tendencies by down, distance, field zone"
+    },
+    "best_players": {
+      "type": "string",
+      "description": "Key players to account for"
+    },
+    "created_by_notes": {
+      "type": "string",
+      "description": "Notes from the coach who created this report"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "team_id",
+    "opponent_name"
+  ]
+}
