@@ -1,0 +1,60 @@
+{
+  "name": "GamePlanItem",
+  "type": "object",
+  "properties": {
+    "game_plan_id": {
+      "type": "string",
+      "description": "Reference to GamePlan"
+    },
+    "section_key": {
+      "type": "string",
+      "description": "Section this item belongs to e.g. openers, red_zone"
+    },
+    "play_id": {
+      "type": "string",
+      "description": "Reference to Play"
+    },
+    "call_sheet_priority": {
+      "type": "integer",
+      "default": 1,
+      "description": "Priority rank within the section (1 = highest)"
+    },
+    "situational_role": {
+      "type": "string",
+      "description": "Role in this section e.g. opener, counter, constraint, shot"
+    },
+    "is_opener": {
+      "type": "boolean",
+      "default": false
+    },
+    "opener_sequence": {
+      "type": "integer",
+      "description": "Sequence number if part of opening script"
+    },
+    "practiced_this_week": {
+      "type": "boolean",
+      "default": false
+    },
+    "practiced_day": {
+      "type": "string",
+      "description": "Comma-separated days practiced e.g. Mon,Tue,Wed"
+    },
+    "included_in_weekly_plan": {
+      "type": "boolean",
+      "default": true
+    },
+    "coach_note": {
+      "type": "string",
+      "description": "Call-sheet specific note from coach"
+    },
+    "order_index": {
+      "type": "integer",
+      "description": "Display order within section"
+    }
+  },
+  "required": [
+    "game_plan_id",
+    "section_key",
+    "play_id"
+  ]
+}

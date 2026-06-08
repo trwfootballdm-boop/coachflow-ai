@@ -1,0 +1,92 @@
+{
+  "name": "ScoutCardSet",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "title": {
+      "type": "string",
+      "description": "Scout card set title e.g. Week 3 Defense Scout Cards"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "practice_script",
+        "game_plan",
+        "play_library",
+        "opponent_package",
+        "manual"
+      ],
+      "description": "Where cards were generated from"
+    },
+    "source_id": {
+      "type": "string",
+      "description": "ID of source entity (game_plan_id, practice_script_id, etc.)"
+    },
+    "side_of_ball": {
+      "type": "string",
+      "enum": [
+        "offense",
+        "defense",
+        "special_teams",
+        "all"
+      ]
+    },
+    "template": {
+      "type": "string",
+      "enum": [
+        "youth_player",
+        "coach_card",
+        "compact_grid",
+        "teaching_card",
+        "defense_scout",
+        "special_teams"
+      ],
+      "default": "coach_card"
+    },
+    "opponent_name": {
+      "type": "string"
+    },
+    "cards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "play_id": {
+            "type": "string"
+          },
+          "scout_look_label": {
+            "type": "string"
+          },
+          "card_note": {
+            "type": "string"
+          },
+          "include_in_print": {
+            "type": "boolean"
+          },
+          "order_index": {
+            "type": "integer"
+          },
+          "group_label": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Ordered array of scout card entries"
+    },
+    "print_options": {
+      "type": "object",
+      "description": "Print config: cards_per_page, show_notes, show_tags, coach_version"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "team_id",
+    "title"
+  ]
+}
