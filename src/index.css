@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,78 +6,100 @@
 
 @layer base {
   :root {
-    --background: 140 18% 96%;
+    --background: 48 20% 97%;
     --foreground: 155 18% 12%;
+
     --card: 0 0% 100%;
     --card-foreground: 155 18% 12%;
+
     --popover: 0 0% 100%;
     --popover-foreground: 155 18% 12%;
-    --primary: 146 38% 27%;
-    --primary-foreground: 60 20% 96%;
-    --secondary: 120 10% 93%;
+
+    --primary: 148 36% 28%;
+    --primary-foreground: 48 25% 96%;
+
+    --secondary: 140 12% 93%;
     --secondary-foreground: 155 18% 12%;
-    --muted: 120 8% 93%;
-    --muted-foreground: 155 10% 38%;
-    --accent: 41 42% 52%;
+
+    --muted: 140 10% 94%;
+    --muted-foreground: 155 9% 38%;
+
+    --accent: 42 48% 52%;
     --accent-foreground: 155 18% 12%;
-    --destructive: 0 55% 42%;
+
+    --destructive: 0 58% 42%;
     --destructive-foreground: 0 0% 98%;
-    --border: 140 10% 84%;
-    --input: 140 10% 84%;
-    --ring: 146 38% 27%;
-    --chart-1: 146 38% 27%;
-    --chart-2: 41 42% 52%;
-    --chart-3: 155 18% 12%;
-    --chart-4: 262 83% 58%;
-    --chart-5: 12 76% 61%;
-    --radius: 0.625rem;
-    --font-heading: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+
+    --border: 140 10% 85%;
+    --input: 140 10% 85%;
+    --ring: 42 48% 52%;
+
+    --chart-1: 148 36% 28%;
+    --chart-2: 42 48% 52%;
+    --chart-3: 210 18% 28%;
+    --chart-4: 10 58% 56%;
+    --chart-5: 220 32% 46%;
+
+    --radius: 0.875rem;
+
+    --font-heading: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
     --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
-    --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    --sidebar-background: 148 22% 16%;
-    --sidebar-foreground: 60 12% 92%;
-    --sidebar-primary: 41 42% 52%;
+
+    --sidebar-background: 148 22% 15%;
+    --sidebar-foreground: 48 18% 92%;
+    --sidebar-primary: 42 48% 52%;
     --sidebar-primary-foreground: 148 22% 12%;
-    --sidebar-accent: 148 18% 21%;
-    --sidebar-accent-foreground: 60 12% 92%;
+    --sidebar-accent: 148 18% 19%;
+    --sidebar-accent-foreground: 48 18% 92%;
     --sidebar-border: 148 12% 24%;
-    --sidebar-ring: 41 42% 52%;
+    --sidebar-ring: 42 48% 52%;
   }
 
   .dark {
     --background: 150 16% 8%;
-    --foreground: 60 10% 92%;
+    --foreground: 48 18% 92%;
+
     --card: 150 14% 11%;
-    --card-foreground: 60 10% 92%;
+    --card-foreground: 48 18% 92%;
+
     --popover: 150 14% 11%;
-    --popover-foreground: 60 10% 92%;
-    --primary: 146 34% 38%;
-    --primary-foreground: 60 20% 96%;
-    --secondary: 150 12% 16%;
-    --secondary-foreground: 60 10% 92%;
-    --muted: 150 12% 16%;
+    --popover-foreground: 48 18% 92%;
+
+    --primary: 148 32% 38%;
+    --primary-foreground: 48 25% 96%;
+
+    --secondary: 150 10% 15%;
+    --secondary-foreground: 48 18% 92%;
+
+    --muted: 150 10% 15%;
     --muted-foreground: 140 6% 66%;
-    --accent: 41 46% 58%;
+
+    --accent: 42 52% 58%;
     --accent-foreground: 150 16% 8%;
+
     --destructive: 0 50% 38%;
     --destructive-foreground: 0 0% 98%;
+
     --border: 150 10% 20%;
     --input: 150 10% 20%;
-    --ring: 41 46% 58%;
-    --chart-1: 146 34% 38%;
-    --chart-2: 41 46% 58%;
-    --chart-3: 140 6% 66%;
-    --chart-4: 262 83% 68%;
-    --chart-5: 12 76% 61%;
+    --ring: 42 52% 58%;
+
+    --chart-1: 148 32% 38%;
+    --chart-2: 42 52% 58%;
+    --chart-3: 210 16% 72%;
+    --chart-4: 10 58% 62%;
+    --chart-5: 220 38% 64%;
+
     --sidebar-background: 148 20% 10%;
-    --sidebar-foreground: 60 10% 92%;
-    --sidebar-primary: 41 46% 58%;
+    --sidebar-foreground: 48 18% 92%;
+    --sidebar-primary: 42 52% 58%;
     --sidebar-primary-foreground: 148 20% 10%;
-    --sidebar-accent: 148 16% 15%;
-    --sidebar-accent-foreground: 60 10% 92%;
+    --sidebar-accent: 148 14% 15%;
+    --sidebar-accent-foreground: 48 18% 92%;
     --sidebar-border: 148 10% 18%;
-    --sidebar-ring: 41 46% 58%;
+    --sidebar-ring: 42 52% 58%;
   }
 }
 
@@ -85,31 +107,144 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  html {
+    @apply scroll-smooth;
+  }
+
   body {
-    @apply bg-background text-foreground font-body;
+    @apply bg-background text-foreground font-body antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1, "tnum" 1;
+    background-image:
+      radial-gradient(circle at top, hsl(var(--accent) / 0.06), transparent 30%);
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-heading tracking-tight text-foreground;
+  }
+
+  h1 {
+    @apply text-3xl md:text-4xl font-bold;
+  }
+
+  h2 {
+    @apply text-2xl font-bold;
+  }
+
+  h3 {
+    @apply text-lg font-semibold;
+  }
+
+  p {
+    @apply text-sm md:text-base text-muted-foreground;
   }
 }
 
-/* Custom scrollbar */
+@layer components {
+  .app-shell {
+    @apply min-h-screen bg-background;
+  }
+
+  .page-shell {
+    @apply mx-auto w-full max-w-[1600px] px-4 py-4 md:px-6 md:py-6;
+  }
+
+  .page-header {
+    @apply mb-6 flex flex-col gap-4 border-b border-border/70 pb-5 md:flex-row md:items-end md:justify-between;
+  }
+
+  .page-eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.24em] text-accent;
+  }
+
+  .page-title {
+    @apply font-heading text-2xl font-bold tracking-tight md:text-3xl;
+  }
+
+  .page-subtitle {
+    @apply mt-1 max-w-3xl text-sm text-muted-foreground;
+  }
+
+  .page-actions {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .surface-card {
+    @apply rounded-2xl border border-border/70 bg-card shadow-sm;
+  }
+
+  .surface-panel {
+    @apply rounded-2xl border border-border/60 bg-card/90 shadow-sm backdrop-blur;
+  }
+
+  .field-surface {
+    background-image:
+      linear-gradient(hsl(var(--primary) / 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--primary) / 0.08) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .film-surface {
+    background:
+      linear-gradient(
+        180deg,
+        hsl(var(--card)) 0%,
+        hsl(var(--card)) 65%,
+        hsl(var(--muted) / 0.55) 100%
+      );
+  }
+
+  .kpi-card {
+    @apply rounded-2xl border border-border/70 bg-card px-4 py-4 shadow-sm;
+  }
+
+  .kpi-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground;
+  }
+
+  .kpi-value {
+    @apply mt-2 text-2xl font-bold tracking-tight text-foreground;
+  }
+
+  .kpi-meta {
+    @apply mt-1 text-xs text-muted-foreground;
+  }
+
+  .team-chip {
+    @apply inline-flex items-center gap-2 rounded-full border border-border/70 bg-muted/60 px-3 py-1 text-xs font-medium text-foreground;
+  }
+
+  .section-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.22em] text-accent;
+  }
+
+  .utility-divider {
+    @apply h-px w-full bg-border/70;
+  }
+
+  .topbar-glass {
+    @apply border-b border-border/70 bg-background/85 backdrop-blur-xl;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 3px;
+  background: hsl(var(--muted-foreground) / 0.26);
+  border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
-}
-
-/* Football field grid pattern */
-.field-grid {
-  background-image: 
-    linear-gradient(hsl(var(--primary) / 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, hsl(var(--primary) / 0.1) 1px, transparent 1px);
-  background-size: 20px 20px;
+  background: hsl(var(--muted-foreground) / 0.42);
 }
