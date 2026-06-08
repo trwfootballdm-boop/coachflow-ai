@@ -15,6 +15,7 @@ import DesignerStatusBar     from '@/components/play-designer/DesignerStatusBar'
 import { validateOffensivePlay } from '@/lib/football-engine/validation';
 import { analyzeConcepts } from '@/lib/football-engine/concepts';
 import { analyzeDefensiveReaction } from '@/lib/football-engine/reactions';
+import { analyzeTiming } from '@/lib/football-engine/timing';
 
 // ─── Default play skeleton ─────────────────────────────────────────────────────
 const EMPTY_PLAY = {

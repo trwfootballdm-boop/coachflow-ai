@@ -52,186 +52,179 @@ export interface TimingAnalysisResult {
   notes: string[];
 }
 
-const DEFAULT_DROP_TIMES: Record<DropFamily, number> = {
+const DROP_TIMES: Record<DropFamily, number> = {
   quick: 1200,
-  three_step: 1600,
-  five_step: 2400,
-  seven_step: 3200,
-  play_action: 3000,
-  gun_quick: 1400,
-  unknown: 2000,
+  three_step: 1400,
+  five_step: 2100,
+  seven_step: 2800,
+  play_action: 2600,
+  gun_quick: 1100,
+  unknown: 1800,
 };
 
-const ROUTE_TIMING_PROFILES: Record<string, { ready: number; peak: number; close: number }> = {
-  vertical: { ready: 2800, peak: 3200, close: 4000 },
-  flat: { ready: 1200, peak: 1600, close: 2400 },
-  slant: { ready: 1400, peak: 1800, close: 2600 },
-  corner: { ready: 2600, peak: 3000, close: 3800 },
-  dig: { ready: 2200, peak: 2600, close: 3400 },
-  drag: { ready: 1600, peak: 2000, close: 3000 },
-  curl: { ready: 1800, peak: 2200, close: 3200 },
-  out: { ready: 1600, peak: 2000, close: 2800 },
-  unknown: { ready: 2000, peak: 2500, close: 3500 },
-};
+function inferDropFamily(concepts: ConceptAnalysisResult): DropFamily {
+  const ids = concepts.concepts.map((c) => c.concept);
 
-function inferDropFamily(conceptResult: ConceptAnalysisResult, formation?: string): DropFamily {
-  const hasQuickRoutes = conceptResult.concepts.some((c) =>
-    ['stick', 'mesh', 'shallow_cross'].includes(c.concept)
-  );
+  if (ids.includes('stick') || ids.includes('snag')) return 'quick';
+  if (ids.includes('mesh') || ids.includes('shallow_cross')) return 'five_step';
+  if (ids.includes('four_verts') || ids.includes('smash')) return 'five_step';
+  if (ids.includes('inside_zone') || ids.includes('power') || ids.includes('counter')) return 'play_action';
 
-  if (hasQuickRoutes) return 'three_step';
-
-  const hasDeepConcepts = conceptResult.concepts.some((c) =>
-    c.concept === 'verticals' || c.concept === 'deep_shot'
-  );
-
-  if (hasDeepConcepts) return 'five_step';
-
-  if (formation?.toLowerCase().includes('shotgun')) return 'gun_quick';
-
-  return 'three_step';
+  return 'unknown';
 }
 
-function estimatePressure(scenario: DefensiveScenario): PressureWindow {
-  const basePressure: PressureWindow = {
-    source: 'base_rush',
-    arriveAtMs: 2800,
-    severity: 'medium',
-    notes: ['Standard 4-man rush timing'],
-  };
+function inferPathWindow(family: string): { readyAtMs: number; peakAtMs: number; closeAtMs: number; notes: string[] } {
+  switch (family) {
+    case 'flat':
+      return { readyAtMs: 900, peakAtMs: 1200, closeAtMs: 1800, notes: ['Fast outlet timing.'] };
+    case 'slant':
+      return { readyAtMs: 1100, peakAtMs: 1450, closeAtMs: 2100, notes: ['Quick in-breaking window.'] };
+    case 'drag':
+    case 'shallow_cross':
+      return { readyAtMs: 1400, peakAtMs: 1900, closeAtMs: 2600, notes: ['Works after underneath movement starts.'] };
+    case 'dig':
+      return { readyAtMs: 2200, peakAtMs: 2600, closeAtMs: 3200, notes: ['Intermediate route; usually later than quick game.'] };
+    case 'corner':
+      return { readyAtMs: 2100, peakAtMs: 2600, closeAtMs: 3200, notes: ['High-low timing on the outside.'] };
+    case 'vertical':
+    case 'go':
+      return { readyAtMs: 2600, peakAtMs: 3200, closeAtMs: 4000, notes: ['Needs time and protection.'] };
+    case 'run':
+      return { readyAtMs: 700, peakAtMs: 1200, closeAtMs: 2200, notes: ['Backfield action develops immediately.'] };
+    default:
+      return { readyAtMs: 1500, peakAtMs: 2100, closeAtMs: 2800, notes: ['Generic timing estimate.'] };
+  }
+}
 
-  if (scenario.pressure === '5man' || scenario.pressure === '6man') {
+function inferPressureWindow(
+  diagram: PlayDiagram,
+  scenario?: DefensiveScenario
+): PressureWindow {
+  const blockers = diagram.players.filter(
+    (p) => p.team_side === 'offense' && ['lineman', 'blocker', 'ball_carrier'].includes(String(p.role_type))
+  ).length;
+
+  let rushers = 4;
+  if (scenario?.pressure === '5man') rushers = 5;
+  if (scenario?.pressure === '6man') rushers = 6;
+
+  if (scenario?.pressure === 'none') {
+    return {
+      source: 'base_rush',
+      arriveAtMs: 2800,
+      severity: 'low',
+      notes: ['Minimal pressure look assumed.'],
+    };
+  }
+
+  if (rushers > blockers) {
+    return {
+      source: rushers - blockers >= 2 ? 'free_runner' : 'overload',
+      arriveAtMs: 1700,
+      severity: 'high',
+      notes: ['Rush count exceeds likely protection count. Throw hot or add protection.'],
+    };
+  }
+
+  if (scenario?.pressure === '5man' || scenario?.pressure === '6man') {
     return {
       source: 'blitz',
-      arriveAtMs: scenario.pressure === '6man' ? 1800 : 2200,
-      severity: 'high',
-      notes: [
-        'Extra rusher(s) detected',
-        'Pressure arrives faster than standard drop',
-        'Consider quick game or hot routes',
-      ],
-    };
-  }
-
-  return basePressure;
-}
-
-function buildRouteWindows(conceptResult: ConceptAnalysisResult): RouteTimingWindow[] {
-  const windows: RouteTimingWindow[] = [];
-
-  for (const match of conceptResult.concepts) {
-    for (const pathId of match.pathIds) {
-      const tokenId = match.playerIds?.[0];
-      const family = match.pathFamilies?.[0] || 'unknown';
-      const profile = ROUTE_TIMING_PROFILES[family] || ROUTE_TIMING_PROFILES.unknown;
-
-      windows.push({
-        pathId,
-        tokenId,
-        family,
-        readyAtMs: profile.ready,
-        peakAtMs: profile.peak,
-        closeAtMs: profile.close,
-        notes: [`${family} route timing window`],
-      });
-    }
-  }
-
-  return windows.sort((a, b) => a.readyAtMs - b.readyAtMs);
-}
-
-function buildProgression(
-  conceptResult: ConceptAnalysisResult,
-  routeWindows: RouteTimingWindow[],
-  dropFamily: DropFamily,
-): ProgressionRead[] {
-  const progression: ProgressionRead[] = [];
-
-  for (const match of conceptResult.concepts) {
-    const primaryPathId = match.pathIds[0];
-    const primaryTokenId = match.playerIds?.[0];
-
-    progression.push({
-      label: `${match.concept} - primary read`,
-      pathId: primaryPathId,
-      tokenId: primaryTokenId,
-      readOrder: progression.length + 1,
-      expectedWindowMs: routeWindows.find((w) => w.pathId === primaryPathId)?.readyAtMs || 2000,
-      notes: [
-        match.why || `Read ${match.concept} concept first`,
-        `Confidence: ${(match.confidence * 100).toFixed(0)}%`,
-      ],
-    });
-  }
-
-  return progression;
-}
-
-function determineVerdict(
-  dropTimeMs: number,
-  pressure: PressureWindow,
-  routeWindows: RouteTimingWindow[],
-): { status: 'on_time' | 'tight_window' | 'late' | 'busted'; summary: string } {
-  const earliestRoute = routeWindows[0];
-  if (!earliestRoute) {
-    return {
-      status: 'busted',
-      summary: 'No route timing windows identified - play may be incomplete',
-    };
-  }
-
-  if (pressure.arriveAtMs < dropTimeMs - 400) {
-    return {
-      status: 'late',
-      summary: `Pressure arrives at ${pressure.arriveAtMs}ms, before drop completion at ${dropTimeMs}ms`,
-    };
-  }
-
-  if (pressure.arriveAtMs < dropTimeMs + 200) {
-    return {
-      status: 'tight_window',
-      summary: `Tight timing: pressure arrives shortly after drop, need quick progression`,
-    };
-  }
-
-  if (earliestRoute.readyAtMs > dropTimeMs + 600) {
-    return {
-      status: 'late',
-      summary: `First route window opens at ${earliestRoute.readyAtMs}ms, significantly after drop`,
+      arriveAtMs: 2100,
+      severity: 'medium',
+      notes: ['Pressure accelerated by added rusher.'],
     };
   }
 
   return {
-    status: 'on_time',
-    summary: 'Timing is on schedule: drop, read, and throw windows align properly',
+    source: 'base_rush',
+    arriveAtMs: 2500,
+    severity: 'medium',
+    notes: ['Standard four-man pressure estimate.'],
   };
+}
+
+function buildProgression(concepts: ConceptAnalysisResult): ProgressionRead[] {
+  const concept = concepts.concepts[0];
+
+  if (!concept) return [];
+
+  switch (concept.concept) {
+    case 'stick':
+      return [
+        { label: 'Flat control', readOrder: 1, expectedWindowMs: 1000, notes: ['Read the flat defender first.'] },
+        { label: 'Stick / settle', readOrder: 2, expectedWindowMs: 1400, notes: ['Replace the defender if he widens.'] },
+        { label: 'Checkdown', readOrder: 3, expectedWindowMs: 1900, notes: ['Take outlet if window compresses.'] },
+      ];
+    case 'shallow_cross':
+      return [
+        { label: 'Shallow', readOrder: 1, expectedWindowMs: 1600, notes: ['Take easy underneath win if available.'] },
+        { label: 'Basic / dig', readOrder: 2, expectedWindowMs: 2400, notes: ['Replace hook defender if he drives shallow.'] },
+        { label: 'Outlet', readOrder: 3, expectedWindowMs: 2800, notes: ['Check ball down if pressure closes pocket.'] },
+      ];
+    case 'mesh':
+      return [
+        { label: 'First crosser', readOrder: 1, expectedWindowMs: 1600, notes: ['Work first shallow runner.'] },
+        { label: 'Second crosser', readOrder: 2, expectedWindowMs: 1850, notes: ['Come across the mesh.'] },
+        { label: 'Sit / settle', readOrder: 3, expectedWindowMs: 2200, notes: ['Find open grass over the ball.'] },
+      ];
+    case 'inside_zone':
+      return [
+        { label: 'Front count', readOrder: 1, expectedWindowMs: 0, notes: ['Count box and identify backside fit.'] },
+        { label: 'Mesh / handoff', readOrder: 2, expectedWindowMs: 700, notes: ['Ride the mesh and confirm lane.'] },
+        { label: 'Cutback / bang', readOrder: 3, expectedWindowMs: 1400, notes: ['Hit cutback if backside fit overcommits.'] },
+      ];
+    case 'power':
+      return [
+        { label: 'Kickout read', readOrder: 1, expectedWindowMs: 400, notes: ['Confirm kickout on edge defender.'] },
+        { label: 'Gap fit', readOrder: 2, expectedWindowMs: 900, notes: ['Hit designated gap with lead blocker.'] },
+        { label: ' Alley / bounce', readOrder: 3, expectedWindowMs: 1500, notes: ['Bend it back if alley closes.'] },
+      ];
+    default:
+      return [
+        { label: 'Primary', readOrder: 1, expectedWindowMs: 1800, notes: ['Work first read in progression.'] },
+        { label: 'Secondary', readOrder: 2, expectedWindowMs: 2400, notes: ['Move to next read if covered.'] },
+        { label: 'Outlet', readOrder: 3, expectedWindowMs: 2900, notes: ['Check down before pressure arrives.'] },
+      ];
+  }
 }
 
 export function analyzeTiming(
   diagram: PlayDiagram,
-  conceptResult: ConceptAnalysisResult,
-  scenario: DefensiveScenario,
-  formation?: string,
+  concepts: ConceptAnalysisResult,
+  scenario?: DefensiveScenario,
 ): TimingAnalysisResult {
-  const dropFamily = inferDropFamily(conceptResult, formation);
-  const dropTimeMs = DEFAULT_DROP_TIMES[dropFamily];
-  const routeWindows = buildRouteWindows(conceptResult);
-  const pressure = estimatePressure(scenario);
-  const progression = buildProgression(conceptResult, routeWindows, dropFamily);
-  const verdict = determineVerdict(dropTimeMs, pressure, routeWindows);
+  const dropFamily = inferDropFamily(concepts);
+  const dropTimeMs = DROP_TIMES[dropFamily];
 
-  const notes: string[] = [];
+  const routeWindows: RouteTimingWindow[] = concepts.assignments.map((a) => {
+    const timing = inferPathWindow(a.family);
+    return {
+      pathId: a.pathId,
+      tokenId: a.tokenId,
+      family: a.family,
+      ...timing,
+    };
+  });
 
-  if (dropFamily === 'three_step' && pressure.severity === 'high') {
-    notes.push('Quick drop matches well against pressure - get ball out fast');
+  const pressure = inferPressureWindow(diagram, scenario);
+
+  const progression = buildProgression(concepts);
+
+  let status: 'on_time' | 'tight_window' | 'late' | 'busted' = 'on_time';
+  const summaryParts: string[] = [];
+
+  if (pressure.arriveAtMs < dropTimeMs) {
+    status = pressure.arriveAtMs < dropTimeMs - 600 ? 'busted' : 'tight_window';
+    summaryParts.push(`Pressure arrives ${Math.round((dropTimeMs - pressure.arriveAtMs) / 100) / 10}s before drop.`);
   }
 
-  if (dropFamily === 'seven_step' && pressure.severity === 'high') {
-    notes.push('WARNING: Deep drop vs pressure - consider max protection or hot routes');
-  }
-
-  if (routeWindows.length === 0) {
-    notes.push('No route timing data available - ensure routes are drawn on diagram');
+  const readyRoutes = routeWindows.filter((r) => r.readyAtMs <= dropTimeMs);
+  if (readyRoutes.length === 0) {
+    status = 'late';
+    summaryParts.push('No routes ready by expected drop time.');
+  } else if (readyRoutes.length < Math.ceil(routeWindows.length / 2)) {
+    status = status === 'on_time' ? 'tight_window' : status;
+    summaryParts.push('Limited windows available at drop time.');
   }
 
   return {
@@ -240,7 +233,14 @@ export function analyzeTiming(
     routeWindows,
     pressure,
     progression,
-    verdict,
-    notes,
+    verdict: {
+      status,
+      summary: summaryParts.join(' ') || 'Timing windows align with concept.',
+    },
+    notes: [
+      `Drop family: ${dropFamily.replace('_', ' ')}.`,
+      `Expected drop: ${(dropTimeMs / 1000).toFixed(1)}s.`,
+      `Pressure severity: ${pressure.severity}.`,
+    ],
   };
 }
