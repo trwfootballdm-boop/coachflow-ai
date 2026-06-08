@@ -3,12 +3,7 @@ import { cn } from '@/lib/utils';
 import { BookMarked, NotebookPen, UserRound, X } from 'lucide-react';
 import { usePlayLibraryStore } from '@/lib/football-engine/playLibraryStore.js';
 
-export default function PlayDetailDrawer({
-  conceptId,
-  callId,
-  open,
-  onClose,
-}) {
+export default function PlayDetailDrawer({ open, onClose, conceptId, callId }) {
   const state = usePlayLibraryStore();
 
   const concept = useMemo(
@@ -165,12 +160,7 @@ export default function PlayDetailDrawer({
   );
 }
 
-function DrawerSection({
-  icon: Icon,
-  title,
-  subtitle,
-  children,
-}) {
+function DrawerSection({ icon: Icon, title, subtitle, children }) {
   return (
     <section className="rounded-2xl border border-border bg-card/60 p-4">
       <div className="flex items-start gap-3">
