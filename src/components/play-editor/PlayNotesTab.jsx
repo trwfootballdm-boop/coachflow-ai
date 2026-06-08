@@ -4,20 +4,20 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, BookOpen, Users } from "lucide-react";
 import { toast } from "sonner";
 
-const Section = ({ icon: Icon, title, subtitle, children }) => (
-  <div className="space-y-3">
+const SectionHeader = ({ icon, title, subtitle }) => {
+  const IconComp = icon;
+  return (
     <div className="flex items-start gap-3">
       <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-        <Icon className="h-4 w-4 text-primary" />
+        <IconComp className="h-4 w-4 text-primary" />
       </div>
       <div>
         <h3 className="text-sm font-display font-bold">{title}</h3>
         <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
       </div>
     </div>
-    {children}
-  </div>
-);
+  );
+};
 
 export default function PlayNotesTab({ play, onChange }) {
   const u = (field, val) => onChange({ ...play, [field]: val });
@@ -25,11 +25,8 @@ export default function PlayNotesTab({ play, onChange }) {
   return (
     <div className="space-y-8 max-w-2xl">
 
-      <Section
-        icon={BookOpen}
-        title="Coaching Points"
-        subtitle="What do coaches need to emphasize when installing this play? Technique, key blocks, reads, timing."
-      >
+      <div className="space-y-3">
+        <SectionHeader icon={BookOpen} title="Coaching Points" subtitle="What do coaches need to emphasize when installing this play? Technique, key blocks, reads, timing." />
         <Textarea
           value={play.coaching_points || ''}
           onChange={e => u('coaching_points', e.target.value)}
@@ -42,15 +39,12 @@ export default function PlayNotesTab({ play, onChange }) {
             <Sparkles className="h-3.5 w-3.5" /> Generate with AI
           </Button>
         </div>
-      </Section>
+      </div>
 
       <div className="h-px bg-border" />
 
-      <Section
-        icon={Users}
-        title="Player-Friendly Description"
-        subtitle='Simplified language your players will understand. Keep it clear and short — written for youth or middle school athletes. No jargon.'
-      >
+      <div className="space-y-3">
+        <SectionHeader icon={Users} title="Player-Friendly Description" subtitle="Simplified language your players will understand. Keep it clear and short — written for youth or middle school athletes. No jargon." />
         <Textarea
           value={play.player_friendly_text || ''}
           onChange={e => u('player_friendly_text', e.target.value)}
@@ -66,7 +60,7 @@ export default function PlayNotesTab({ play, onChange }) {
             <Sparkles className="h-3.5 w-3.5" /> Simplify with AI
           </Button>
         </div>
-      </Section>
+      </div>
     </div>
   );
 }
