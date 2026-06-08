@@ -17,7 +17,8 @@ import {
   Brain,
   ChevronLeft,
   ChevronRight,
-  MessageSquare
+  MessageSquare,
+  GraduationCap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -35,6 +36,7 @@ const navItems = [
   { label: 'Scouting', icon: Search, path: '/scouting' },
   { label: 'Roster', icon: Users, path: '/roster' },
   { label: 'Terminology', icon: Calendar, path: '/terminology' },
+  { label: 'Player Portal', icon: GraduationCap, path: '/player-dashboard' },
   { label: 'Collaboration', icon: MessageSquare, path: '/collaboration' },
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];

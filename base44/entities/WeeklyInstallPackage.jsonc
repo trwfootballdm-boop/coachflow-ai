@@ -1,0 +1,125 @@
+{
+  "name": "WeeklyInstallPackage",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "week_number": {
+      "type": "integer",
+      "description": "Week number"
+    },
+    "opponent_name": {
+      "type": "string",
+      "description": "Opponent name"
+    },
+    "game_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "title": {
+      "type": "string",
+      "description": "Package title e.g. Week 3 Install"
+    },
+    "description": {
+      "type": "string",
+      "description": "Package description for players"
+    },
+    "offense_content_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "PlayerContent IDs for offense"
+    },
+    "defense_content_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "PlayerContent IDs for defense"
+    },
+    "special_teams_content_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "PlayerContent IDs for special teams"
+    },
+    "position_specific_assignments": {
+      "type": "object",
+      "description": "Assignment IDs by position group",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "quiz_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Quiz IDs for this week"
+    },
+    "install_schedule": {
+      "type": "object",
+      "description": "When each content piece should be reviewed",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "content_id": {
+            "type": "string"
+          },
+          "target_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "required": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "coaching_message": {
+      "type": "string",
+      "description": "Message from head coach to players"
+    },
+    "publish_status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "published",
+        "archived"
+      ],
+      "default": "draft"
+    },
+    "published_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "visible_from_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "team_completion_rate": {
+      "type": "number",
+      "description": "Percentage of players who completed"
+    },
+    "average_confidence": {
+      "type": "number",
+      "description": "Average player confidence rating"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "team_id",
+    "week_number",
+    "title"
+  ]
+}

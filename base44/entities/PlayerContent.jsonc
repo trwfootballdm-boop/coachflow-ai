@@ -1,0 +1,187 @@
+{
+  "name": "PlayerContent",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "content_type": {
+      "type": "string",
+      "enum": [
+        "play",
+        "install_bundle",
+        "weekly_package",
+        "scout_card",
+        "wristband",
+        "terminology",
+        "assignment"
+      ],
+      "description": "Type of content"
+    },
+    "title": {
+      "type": "string",
+      "description": "Player-facing title"
+    },
+    "description": {
+      "type": "string",
+      "description": "Player-facing description"
+    },
+    "source_entity_type": {
+      "type": "string",
+      "enum": [
+        "Play",
+        "PracticeScript",
+        "GamePlan",
+        "ScoutCardSet",
+        "Wristband",
+        "Terminology"
+      ],
+      "description": "Source entity type"
+    },
+    "source_entity_id": {
+      "type": "string",
+      "description": "ID of source entity"
+    },
+    "source_version": {
+      "type": "number",
+      "description": "Version of source content at publish time"
+    },
+    "target_audience": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "all",
+          "offense",
+          "defense",
+          "special_teams",
+          "qb",
+          "rb",
+          "wr",
+          "te",
+          "ol",
+          "dl",
+          "lb",
+          "cb",
+          "s",
+          "k",
+          "p",
+          "ls"
+        ]
+      },
+      "description": "Position groups or units this content is for"
+    },
+    "week_number": {
+      "type": "number",
+      "description": "Week number if part of weekly install"
+    },
+    "opponent_name": {
+      "type": "string",
+      "description": "Opponent name if week-specific"
+    },
+    "player_view_mode": {
+      "type": "string",
+      "enum": [
+        "full",
+        "simplified",
+        "assignment_only",
+        "animation_only",
+        "card"
+      ],
+      "default": "simplified",
+      "description": "How much detail to show players"
+    },
+    "simplified_diagram_data": {
+      "type": "object",
+      "description": "Simplified diagram for player view (only their assignments highlighted)"
+    },
+    "position_specific_notes": {
+      "type": "object",
+      "description": "Notes keyed by position code",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "key_coaching_points": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Bullet points for players"
+    },
+    "terminology_glossary": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "term": {
+            "type": "string"
+          },
+          "definition": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Relevant terms for this content"
+    },
+    "includes_quiz": {
+      "type": "boolean",
+      "default": false
+    },
+    "quiz_id": {
+      "type": "string",
+      "description": "Reference to PlayerQuiz if applicable"
+    },
+    "requires_acknowledgement": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether players must acknowledge they reviewed it"
+    },
+    "publish_status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "published",
+        "archived"
+      ],
+      "default": "draft"
+    },
+    "published_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "published_by_id": {
+      "type": "string",
+      "description": "Coach who published"
+    },
+    "visible_from_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When players can start viewing"
+    },
+    "visible_until_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When content expires"
+    },
+    "view_count": {
+      "type": "number",
+      "default": 0
+    },
+    "acknowledgement_count": {
+      "type": "number",
+      "default": 0
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "team_id",
+    "content_type",
+    "title",
+    "target_audience"
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "name": "PlayerAssignment",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "player_content_id": {
+      "type": "string",
+      "description": "Reference to PlayerContent"
+    },
+    "position_group": {
+      "type": "string",
+      "enum": [
+        "qb",
+        "rb",
+        "wr",
+        "te",
+        "ol",
+        "dl",
+        "lb",
+        "cb",
+        "s",
+        "k",
+        "p",
+        "ls",
+        "all"
+      ],
+      "description": "Position group this assignment is for"
+    },
+    "play_id": {
+      "type": "string",
+      "description": "Reference to Play if applicable"
+    },
+    "assignment_title": {
+      "type": "string",
+      "description": "Title for this assignment"
+    },
+    "assignment_description": {
+      "type": "string",
+      "description": "What the player needs to learn/do"
+    },
+    "key_responsibilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Bullet list of responsibilities"
+    },
+    "alignment_notes": {
+      "type": "string",
+      "description": "Where to align vs different fronts"
+    },
+    "technique_points": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Technical execution points"
+    },
+    "read_keys": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "What to read/keys"
+    },
+    "common_mistakes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "What to avoid"
+    },
+    "video_url": {
+      "type": "string",
+      "description": "Optional video link"
+    },
+    "diagram_highlight": {
+      "type": "object",
+      "description": "Position-specific diagram highlights"
+    },
+    "must_know_terms": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Terminology this player must know"
+    },
+    "order_index": {
+      "type": "integer",
+      "description": "Display order"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "team_id",
+    "position_group",
+    "assignment_title"
+  ]
+}

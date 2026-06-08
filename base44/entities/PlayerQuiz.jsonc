@@ -1,0 +1,127 @@
+{
+  "name": "PlayerQuiz",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "player_content_id": {
+      "type": "string",
+      "description": "Reference to PlayerContent"
+    },
+    "quiz_type": {
+      "type": "string",
+      "enum": [
+        "play_understanding",
+        "assignment_check",
+        "terminology",
+        "concept_quiz",
+        "weekly_review"
+      ],
+      "description": "Type of quiz"
+    },
+    "title": {
+      "type": "string",
+      "description": "Quiz title"
+    },
+    "description": {
+      "type": "string",
+      "description": "Quiz description for players"
+    },
+    "position_group": {
+      "type": "string",
+      "enum": [
+        "qb",
+        "rb",
+        "wr",
+        "te",
+        "ol",
+        "dl",
+        "lb",
+        "cb",
+        "s",
+        "all"
+      ],
+      "description": "Position group this quiz is for"
+    },
+    "play_id": {
+      "type": "string",
+      "description": "Reference to Play if play-specific"
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question_text": {
+            "type": "string"
+          },
+          "question_type": {
+            "type": "string",
+            "enum": [
+              "multiple_choice",
+              "true_false",
+              "diagram_identification"
+            ]
+          },
+          "answer_choices": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "correct_answer_index": {
+            "type": "integer"
+          },
+          "explanation": {
+            "type": "string",
+            "description": "Why this answer is correct"
+          },
+          "diagram_url": {
+            "type": "string",
+            "description": "Optional diagram for diagram identification"
+          },
+          "points": {
+            "type": "integer",
+            "default": 1
+          }
+        }
+      },
+      "description": "Quiz questions"
+    },
+    "passing_score": {
+      "type": "integer",
+      "default": 80,
+      "description": "Percentage needed to pass"
+    },
+    "max_attempts": {
+      "type": "integer",
+      "default": 3,
+      "description": "Maximum attempts allowed"
+    },
+    "time_limit_minutes": {
+      "type": "integer",
+      "description": "Time limit if applicable"
+    },
+    "show_correct_answers_after": {
+      "type": "boolean",
+      "default": true,
+      "description": "Show correct answers after submission"
+    },
+    "randomize_questions": {
+      "type": "boolean",
+      "default": false
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "team_id",
+    "quiz_type",
+    "title",
+    "questions"
+  ]
+}

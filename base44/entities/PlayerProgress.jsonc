@@ -1,0 +1,120 @@
+{
+  "name": "PlayerProgress",
+  "type": "object",
+  "properties": {
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "player_id": {
+      "type": "string",
+      "description": "Reference to Player entity"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User ID if player has app access"
+    },
+    "player_content_id": {
+      "type": "string",
+      "description": "Reference to PlayerContent"
+    },
+    "player_quiz_id": {
+      "type": "string",
+      "description": "Reference to PlayerQuiz if applicable"
+    },
+    "progress_type": {
+      "type": "string",
+      "enum": [
+        "viewed",
+        "acknowledged",
+        "quiz_started",
+        "quiz_completed",
+        "quiz_passed",
+        "quiz_failed"
+      ],
+      "description": "Type of progress event"
+    },
+    "view_count": {
+      "type": "integer",
+      "default": 0
+    },
+    "first_viewed_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_viewed_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "acknowledged_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "quiz_score": {
+      "type": "number",
+      "description": "Percentage score if quiz taken"
+    },
+    "quiz_attempts": {
+      "type": "integer",
+      "default": 0
+    },
+    "best_quiz_score": {
+      "type": "number",
+      "description": "Best score across attempts"
+    },
+    "passed_quiz": {
+      "type": "boolean",
+      "default": false
+    },
+    "confidence_rating": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Player self-rated confidence (1=not confident, 5=very confident)"
+    },
+    "confidence_rated_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "confusion_flags": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question_number": {
+            "type": "integer"
+          },
+          "confusion_note": {
+            "type": "string"
+          },
+          "flagged_date": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "description": "Questions or concepts the player found confusing"
+    },
+    "time_spent_seconds": {
+      "type": "integer",
+      "default": 0,
+      "description": "Total time spent on this content"
+    },
+    "last_activity_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Player notes or questions for coaches"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "team_id",
+    "player_content_id"
+  ]
+}

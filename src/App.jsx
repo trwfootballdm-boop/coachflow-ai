@@ -32,6 +32,7 @@ import Roster from '@/pages/Roster';
 import Terminology from '@/pages/Terminology';
 import Settings from '@/pages/Settings';
 import WeeklyInstallPlanner from '@/pages/WeeklyInstallPlanner';
+import PlayerDashboard from '@/pages/PlayerDashboard';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -82,6 +83,7 @@ const AuthenticatedApp = () => {
             <Route path="/terminology" element={<Terminology />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/weekly-install" element={<WeeklyInstallPlanner />} />
+            <Route path="/player-dashboard" element={<PlayerDashboard />} />
           </Route>
         </Route>
 
