@@ -14,6 +14,7 @@ import PlayTable from '@/components/play-library/PlayTable';
 import PlayDetailPanel from '@/components/play-library/PlayDetailPanel';
 import BulkActionBar from '@/components/play-library/BulkActionBar';
 import SavedViews from '@/components/play-library/SavedViews';
+import PlayCardList from '@/components/play-library/PlayCardList';
 
 const SIDE_TABS = [
   { value: 'offense', label: 'Offense' },
@@ -198,7 +199,7 @@ export default function PlayLibrary() {
   ].filter(Boolean).length;
 
   return (
-    <div className="flex h-[calc(100vh-64px)] -m-6 overflow-hidden">
+    <div className={cn("flex gap-0 h-[calc(100vh-64px)] -m-6 overflow-hidden", detailPlay && "")}>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
@@ -226,7 +227,7 @@ export default function PlayLibrary() {
           </div>
 
           {/* Side-of-ball tabs */}
-          <div className="flex items-center gap-1 bg-secondary/60 p-1 rounded-xl w-fit overflow-x-auto">
+          <div className="flex items-center gap-1 bg-secondary/60 p-1 rounded-xl w-fit">
             {SIDE_TABS.map(tab => (
               <button
                 key={tab.value}
@@ -291,21 +292,39 @@ export default function PlayLibrary() {
             </div>
           ) : (
             <>
-              <PlayTable
-                plays={pagePlays}
-                sort={sort}
-                onSort={handleSort}
-                selected={selected}
-                onSelect={handleSelect}
-                onSelectAll={handleSelectAll}
-                onOpen={(play) => setDetailPlay(play)}
-                onEdit={(play) => navigate(`/play-designer?id=${play.id}`)}
-                onDuplicate={(play) => duplicateMutation.mutate(play)}
-                onToggleFav={(play) => toggleFavMutation.mutate(play)}
-                onToggleActive={(play) => toggleActiveMutation.mutate(play)}
-                onAddToScript={handleAddToScript}
-                onAddToGamePlan={handleAddToGamePlan}
-              />
+              {/* Desktop table */}
+              <div className="hidden md:block">
+                <PlayTable
+                  plays={pagePlays}
+                  sort={sort}
+                  onSort={handleSort}
+                  selected={selected}
+                  onSelect={handleSelect}
+                  onSelectAll={handleSelectAll}
+                  onOpen={(play) => setDetailPlay(play)}
+                  onEdit={(play) => navigate(`/play-designer?id=${play.id}`)}
+                  onDuplicate={(play) => duplicateMutation.mutate(play)}
+                  onToggleFav={(play) => toggleFavMutation.mutate(play)}
+                  onToggleActive={(play) => toggleActiveMutation.mutate(play)}
+                  onAddToScript={handleAddToScript}
+                  onAddToGamePlan={handleAddToGamePlan}
+                />
+              </div>
+              {/* Mobile cards */}
+              <div className="md:hidden">
+                <PlayCardList
+                  plays={pagePlays}
+                  selected={selected}
+                  onSelect={handleSelect}
+                  onOpen={(play) => setDetailPlay(play)}
+                  onEdit={(play) => navigate(`/play-designer?id=${play.id}`)}
+                  onDuplicate={(play) => duplicateMutation.mutate(play)}
+                  onToggleFav={(play) => toggleFavMutation.mutate(play)}
+                  onToggleActive={(play) => toggleActiveMutation.mutate(play)}
+                  onAddToScript={handleAddToScript}
+                  onAddToGamePlan={handleAddToGamePlan}
+                />
+              </div>
 
               {/* Pagination */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2 pb-8">
@@ -347,9 +366,9 @@ export default function PlayLibrary() {
         </div>
       </div>
 
-      {/* Right detail panel — slides in on desktop, overlays on mobile */}
+      {/* Right detail panel */}
       {detailPlay && (
-        <div className="w-full sm:w-80 xl:w-96 shrink-0 border-l border-border overflow-hidden absolute right-0 top-0 bottom-0 sm:relative z-20 sm:z-auto">
+        <div className="w-80 xl:w-96 shrink-0 overflow-hidden">
           <PlayDetailPanel
             play={detailPlay}
             onClose={() => setDetailPlay(null)}

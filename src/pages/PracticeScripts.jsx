@@ -2,39 +2,27 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTeam } from '@/components/TeamContext';
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, FileText, Calendar, Trash2, Clock } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, FileText, Calendar, Trash2, Clock, ChevronRight, Loader2 } from "lucide-react";
 import { format } from 'date-fns';
 import { toast } from "sonner";
-
-const periodTypes = ['install', 'team_run', 'team_pass', 'red_zone', 'two_minute', 'goal_line', 'special_teams', 'walkthrough', 'custom'];
+import { cn } from "@/lib/utils";
+import ScriptBuilder from '@/components/practice-scripts/ScriptBuilder';
+import NewScriptDialog from '@/components/practice-scripts/NewScriptDialog';
 
 export default function PracticeScripts() {
   const { activeTeamId } = useTeam();
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
-  const [newScript, setNewScript] = useState({ title: '', practice_date: '', period_type: 'install', duration_minutes: 15 });
+  const [openScriptId, setOpenScriptId] = useState(null);
+  const [search, setSearch] = useState('');
 
-  const { data: scripts = [] } = useQuery({
+  const { data: scripts = [], isLoading } = useQuery({
     queryKey: ['practiceScripts', activeTeamId],
     queryFn: () => base44.entities.PracticeScript.filter({ team_id: activeTeamId }, '-updated_date'),
     enabled: !!activeTeamId,
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.PracticeScript.create({ ...data, team_id: activeTeamId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['practiceScripts'] });
-      setShowCreate(false);
-      setNewScript({ title: '', practice_date: '', period_type: 'install', duration_minutes: 15 });
-      toast.success('Practice script created');
-    },
   });
 
   const deleteMutation = useMutation({
@@ -45,94 +33,144 @@ export default function PracticeScripts() {
     },
   });
 
+  const openScript = scripts.find(s => s.id === openScriptId);
+
+  const filtered = scripts.filter(s =>
+    !search || s.title?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (openScriptId && openScript) {
+    return (
+      <ScriptBuilder
+        script={openScript}
+        onBack={() => setOpenScriptId(null)}
+        teamId={activeTeamId}
+      />
+    );
+  }
+
   return (
-    <div className="space-y-6 max-w-7xl">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 max-w-5xl">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-display font-bold">Practice Scripts</h1>
-          <p className="text-sm text-muted-foreground">{scripts.length} scripts</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{scripts.length} script{scripts.length !== 1 ? 's' : ''} · Build structured practice plans from your playbook</p>
         </div>
-        <Dialog open={showCreate} onOpenChange={setShowCreate}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 rounded-xl"><Plus className="h-4 w-4" /> New Script</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="font-display">New Practice Script</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 mt-4">
-              <div>
-                <Label>Title</Label>
-                <Input value={newScript.title} onChange={(e) => setNewScript({ ...newScript, title: e.target.value })} placeholder="e.g. Tuesday Install Period" className="mt-1.5" />
-              </div>
-              <div>
-                <Label>Practice Date</Label>
-                <Input type="date" value={newScript.practice_date} onChange={(e) => setNewScript({ ...newScript, practice_date: e.target.value })} className="mt-1.5" />
-              </div>
-              <div>
-                <Label>Period Type</Label>
-                <Select value={newScript.period_type} onValueChange={(v) => setNewScript({ ...newScript, period_type: v })}>
-                  <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {periodTypes.map(t => (
-                      <SelectItem key={t} value={t}>{t.replace(/_/g, ' ')}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Duration (minutes)</Label>
-                <Input type="number" value={newScript.duration_minutes} onChange={(e) => setNewScript({ ...newScript, duration_minutes: parseInt(e.target.value) || 0 })} className="mt-1.5" />
-              </div>
-              <Button onClick={() => createMutation.mutate(newScript)} disabled={!newScript.title} className="w-full">
-                Create Script
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setShowCreate(true)} className="gap-2 rounded-xl shrink-0">
+          <Plus className="h-4 w-4" /> New Script
+        </Button>
       </div>
 
-      {scripts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="p-4 rounded-2xl bg-secondary mb-4">
+      {/* Search */}
+      {scripts.length > 3 && (
+        <div className="relative max-w-xs">
+          <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search scripts..." className="pl-9 bg-secondary/50 border-0 h-9" />
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-7 w-7 animate-spin text-primary" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="h-16 w-16 rounded-2xl bg-secondary flex items-center justify-center mb-4">
             <FileText className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-display font-semibold">No practice scripts yet</h3>
-          <p className="text-sm text-muted-foreground mt-1">Build scripts to organize your practice periods.</p>
+          <h3 className="text-lg font-display font-semibold">
+            {scripts.length === 0 ? 'No practice scripts yet' : 'No scripts match your search'}
+          </h3>
+          <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+            {scripts.length === 0
+              ? 'Build structured practice plans by pulling plays from your library and organizing them into timed periods.'
+              : 'Try a different search term.'}
+          </p>
+          {scripts.length === 0 && (
+            <Button onClick={() => setShowCreate(true)} className="mt-4 gap-2 rounded-xl">
+              <Plus className="h-4 w-4" /> Create First Script
+            </Button>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {scripts.map(script => (
-            <Card key={script.id} className="border-0 shadow-sm hover:shadow-md transition-all">
-              <CardContent className="p-5">
-                <h3 className="font-semibold mb-1">{script.title}</h3>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  <Badge variant="secondary" className="text-xs capitalize">{script.period_type?.replace(/_/g, ' ')}</Badge>
-                  {script.duration_minutes && (
-                    <Badge variant="outline" className="text-xs gap-1">
-                      <Clock className="h-3 w-3" /> {script.duration_minutes} min
-                    </Badge>
-                  )}
-                </div>
-                {script.practice_date && (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-3">
-                    <Calendar className="h-3 w-3" />
-                    {format(new Date(script.practice_date), 'MMM d, yyyy')}
-                  </p>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  {script.play_sequence?.length || 0} plays in sequence
-                </p>
-                <div className="flex items-center gap-2 pt-3 mt-3 border-t border-border">
-                  <Button variant="ghost" size="sm" className="text-xs gap-1 text-destructive" onClick={() => deleteMutation.mutate(script.id)}>
-                    <Trash2 className="h-3 w-3" /> Delete
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filtered.map(script => (
+            <ScriptCard
+              key={script.id}
+              script={script}
+              onOpen={() => setOpenScriptId(script.id)}
+              onDelete={() => deleteMutation.mutate(script.id)}
+            />
           ))}
         </div>
       )}
+
+      <NewScriptDialog
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        teamId={activeTeamId}
+        onCreated={(id) => { setShowCreate(false); setOpenScriptId(id); }}
+      />
     </div>
+  );
+}
+
+function ScriptCard({ script, onOpen, onDelete }) {
+  const dayColors = {
+    monday_install: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
+    tuesday_team: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+    wednesday_polish: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+    thursday_walkthrough: 'bg-purple-500/10 text-purple-700 dark:text-purple-400',
+  };
+
+  return (
+    <button
+      onClick={onOpen}
+      className="group text-left bg-card border border-border rounded-xl p-5 hover:shadow-md hover:border-primary/20 transition-all"
+    >
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <h3 className="font-display font-semibold text-sm leading-tight">{script.title}</h3>
+        <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary transition-colors shrink-0 mt-0.5" />
+      </div>
+
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {script.practice_day && (
+          <Badge variant="secondary" className={cn("text-[10px] capitalize", dayColors[script.practice_day] || '')}>
+            {script.practice_day.replace(/_/g, ' ')}
+          </Badge>
+        )}
+        {script.focus_area && (
+          <Badge variant="outline" className="text-[10px]">{script.focus_area}</Badge>
+        )}
+        {script.generated_by_ai && (
+          <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-primary/20">AI</Badge>
+        )}
+      </div>
+
+      {script.script_date && (
+        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-2">
+          <Calendar className="h-3 w-3" />
+          {format(new Date(script.script_date), 'EEE, MMM d, yyyy')}
+        </p>
+      )}
+
+      {script.coaching_emphasis && (
+        <p className="text-xs text-muted-foreground italic truncate">"{script.coaching_emphasis}"</p>
+      )}
+
+      <div className="flex items-center justify-between pt-3 mt-3 border-t border-border">
+        <span className="text-xs text-muted-foreground">
+          {script.updated_date ? `Updated ${format(new Date(script.updated_date), 'MMM d')}` : 'Draft'}
+        </span>
+        <button
+          onClick={(e) => { e.stopPropagation(); if (confirm('Delete this script?')) onDelete(); }}
+          className="text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1"
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
+      </div>
+    </button>
   );
 }
