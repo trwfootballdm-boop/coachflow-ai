@@ -298,10 +298,11 @@ Deno.serve(async (req) => {
 
     const fullPrompt = [prompt, helperContext].filter(Boolean).join('\n\nAdditional context: ');
 
-    const userMsg = `Generate a complete football play diagram for this play idea:\n\n"${fullPrompt}"\n\nReturn ONLY valid JSON following the exact schema specified. No markdown fences, no explanation.`;
+    const systemInstructions = buildSystemPrompt();
+    const fullMsg = `${systemInstructions}\n\n---\n\nNow generate a complete football play diagram for this play idea:\n\n"${fullPrompt}"\n\nReturn ONLY valid JSON. No markdown, no explanation, no code fences.`;
 
     const rawText = await base44.integrations.Core.InvokeLLM({
-      prompt: userMsg,
+      prompt: fullMsg,
       model: 'claude_sonnet_4_6',
     });
 
@@ -325,9 +326,6 @@ Deno.serve(async (req) => {
       console.error('Raw LLM output (truncated):', String(rawText).slice(0, 500));
       return Response.json({ error: 'AI returned unparseable data. Please try again.' }, { status: 500 });
     }
-
-    console.log('LLM result keys:', JSON.stringify(Object.keys(result || {})));
-    console.log('LLM result snippet:', JSON.stringify(result).slice(0, 600));
 
     // Normalize: some models wrap differently
     if (result?.play && !result?.play_meta) {

@@ -14,8 +14,10 @@ import {
   Users,
   Settings,
   BookOpen,
+  Brain,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -24,15 +26,16 @@ const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
   { label: 'Play Designer', icon: PenTool, path: '/play-designer' },
   { label: 'Play Library', icon: Library, path: '/play-library' },
-  { label: 'Starter Library', icon: BookOpen, path: '/library-browser' },
   { label: 'Game Planning', icon: ClipboardList, path: '/game-planning' },
+  { label: 'Weekly Install', icon: Brain, path: '/weekly-install' },
   { label: 'Practice Scripts', icon: FileText, path: '/practice-scripts' },
   { label: 'Scout Cards', icon: Shield, path: '/scout-cards' },
   { label: 'Wristband', icon: Rows3, path: '/wristband' },
-  { label: 'Install Sheets', icon: Calendar, path: '/install-sheets' },
+  { label: 'Starter Library', icon: BookOpen, path: '/install-sheets' },
   { label: 'Scouting', icon: Search, path: '/scouting' },
   { label: 'Roster', icon: Users, path: '/roster' },
-  { label: 'Terminology', icon: BookOpen, path: '/terminology' },
+  { label: 'Terminology', icon: Calendar, path: '/terminology' },
+  { label: 'Collaboration', icon: MessageSquare, path: '/collaboration' },
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];
 

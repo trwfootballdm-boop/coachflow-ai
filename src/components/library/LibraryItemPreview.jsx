@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { X, Download, Tag, Info, Clipboard } from 'lucide-react';
+import { X, Download, Tag, Clipboard, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const DIFFICULTY_COLORS = {
@@ -206,15 +206,5 @@ export default function LibraryItemPreview({ item, onClose, onImport }) {
         </p>
       </div>
     </div>
-  );
-}
-
-// Missing import fix
-function Eye({ className }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
   );
 }

@@ -4,7 +4,7 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
-
+    
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -15,139 +15,192 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
-    // Fetch opponent data if provided
+    // Fetch opponent data
     let opponent = null;
     if (opponent_id) {
       const opponents = await base44.entities.Opponent.filter({ id: opponent_id });
-      opponent = opponents[0] || null;
+      opponent = opponents[0];
     }
 
     // Fetch team's existing plays
-    const teamPlays = await base44.entities.Play.filter({ team_id, side: side_of_ball, is_active: true });
-
-    // Fetch team readiness data (recently practiced plays)
-    const recentScripts = await base44.entities.PracticeScript.filter({ 
+    const allPlays = await base44.entities.Play.filter({ 
       team_id, 
-      active: true 
-    }, '-script_date', 5);
-
-    const practicedPlayIds = new Set();
-    recentScripts.forEach(script => {
-      if (script.play_ids) {
-        script.play_ids.forEach(id => practicedPlayIds.add(id));
-      }
+      side: side_of_ball,
+      is_active: true
     });
 
-    // Build context for AI
-    const context = {
+    // Fetch practice history (last 14 days)
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    
+    const recentScripts = await base44.entities.PracticeScript.filter({
       team_id,
-      opponent: opponent ? {
-        name: opponent.name,
-        base_defense: opponent.base_defense,
-        base_offense: opponent.base_offense,
-        defensive_tendencies: opponent.defensive_tendencies,
-        offensive_tendencies: opponent.offensive_tendencies,
-        blitz_tendencies: opponent.blitz_tendencies,
-        strengths: opponent.strengths,
-        weaknesses: opponent.weaknesses
-      } : null,
-      team_readiness: {
-        practiced_play_count: practicedPlayIds.size,
-        recent_install_count: recentScripts.length
-      },
-      existing_plays: teamPlays.map(p => ({
-        id: p.id,
-        name: p.name,
-        formation: p.formation,
-        play_family: p.play_family,
-        run_pass: p.run_pass,
-        situation_tags: p.situation_tags || [],
-        down_distance_tags: p.down_distance_tags || [],
-        field_zone_tags: p.field_zone_tags || [],
-        opponent_front_tags: p.opponent_front_tags || [],
-        coverage_tags: p.coverage_tags || [],
-        risk_level: p.risk_level,
-        age_level_difficulty: p.age_level_difficulty,
-        install_day: p.install_day,
-        is_favorite: p.is_favorite
-      }))
-    };
-
-    // Call AI to generate recommendations
-    const aiResponse = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are an expert football coach assisting with game planning. Based on the team's existing playbook and opponent analysis, recommend the best plays for this week's game plan.
-
-Context:
-${JSON.stringify(context, null, 2)}
-
-Task:
-Analyze the team's playbook and recommend 8-12 plays that would be most effective against this opponent. Consider:
-1. Opponent tendencies and weaknesses
-2. Team's proficiency level (age/skill)
-3. Recently practiced plays (higher confidence)
-4. Balance of run/pass and formations
-5. Situational effectiveness (red zone, 3rd down, etc.)
-6. Play complexity vs opponent's defensive/offsive capabilities
-
-Return a JSON array of play recommendations with this structure:
-[
-  {
-    "play_id": "string (ID from existing plays)",
-    "priority_rank": number (1-12),
-    "situation": "string (e.g., base, red_zone, 3rd_short)",
-    "confidence_level": "high" | "medium" | "low",
-    "why_recommended": "string (2-3 sentences explaining why this play matches up well)",
-    "readiness_status": "practiced_recently" | "installed_but_stale" | "new_this_week",
-    "coaching_point": "string (key focus for this play vs this opponent)"
-  }
-]
-
-Only recommend plays that exist in the team's playbook (use the play_id from existing_plays). If the playbook lacks certain concepts needed, note that in a separate "gaps" array.`,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          recommendations: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                play_id: { type: "string" },
-                priority_rank: { type: "integer" },
-                situation: { type: "string" },
-                confidence_level: { type: "string", enum: ["high", "medium", "low"] },
-                why_recommended: { type: "string" },
-                readiness_status: { type: "string", enum: ["practiced_recently", "installed_but_stale", "new_this_week"] },
-                coaching_point: { type: "string" }
-              },
-              required: ["play_id", "priority_rank", "situation", "confidence_level", "why_recommended", "readiness_status"]
-            }
-          },
-          gaps: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                concept_missing: { type: "string" },
-                situation: { type: "string" },
-                recommendation: { type: "string" }
-              }
-            }
-          },
-          game_plan_summary: {
-            type: "string"
-          }
-        },
-        required: ["recommendations"]
-      },
-      model: "claude_sonnet_4_6"
+      script_date: { $gte: twoWeeksAgo.toISOString().split('T')[0] }
     });
+
+    // Build practiced plays map
+    const practicedPlayIds = new Set();
+    const playPracticeCount = {};
+    
+    for (const script of recentScripts) {
+      const scriptItems = await base44.entities.PracticeScriptItem.filter({
+        script_id: script.id
+      });
+      
+      for (const item of scriptItems) {
+        if (item.play_id) {
+          practicedPlayIds.add(item.play_id);
+          playPracticeCount[item.play_id] = (playPracticeCount[item.play_id] || 0) + 1;
+        }
+      }
+    }
+
+    // Analyze playbook gaps and generate recommendations
+    const recommendations = [];
+    const gaps = [];
+
+    // Priority situations to check
+    const prioritySituations = [
+      { situation: 'openers', field_zone: 'any', down_distance: ['1st-10'] },
+      { situation: 'red_zone', field_zone: 'red_zone', down_distance: ['2nd-short', '3rd-short'] },
+      { situation: 'third_down', field_zone: 'any', down_distance: ['3rd-short', '3rd-medium', '3rd-long'] },
+      { situation: 'goal_line', field_zone: 'goal_line', down_distance: ['1st-goal', '2nd-goal'] },
+      { situation: 'two_minute', field_zone: 'any', down_distance: ['2pt', '4th-short'] }
+    ];
+
+    for (const prio of prioritySituations) {
+      // Find plays that match this situation
+      const matchingPlays = allPlays.filter(play => {
+        const fieldMatch = !prio.field_zone || prio.field_zone === 'any' || 
+                          (play.field_zone_tags || []).includes(prio.field_zone);
+        const downMatch = !prio.down_distance || 
+                         (play.down_distance_tags || []).some(d => prio.down_distance.includes(d));
+        return fieldMatch && downMatch;
+      });
+
+      // Check if we have practiced plays for this situation
+      const practicedMatching = matchingPlays.filter(p => practicedPlayIds.has(p.id));
+
+      if (practicedMatching.length === 0 && matchingPlays.length > 0) {
+        // Gap: have plays but haven't practiced
+        const bestPlay = matchingPlays[0];
+        recommendations.push({
+          priority_rank: recommendations.length + 1,
+          play_id: bestPlay.id,
+          play_name: bestPlay.name,
+          situation: prio.situation,
+          readiness_status: 'installed_but_stale',
+          confidence_level: 'high',
+          why_recommended: `Critical ${prio.situation.replace('_', ' ')} play needs review before game day`,
+          coaching_point: 'Reps needed to build muscle memory',
+          assumption: 'This play was installed but not recently practiced'
+        });
+      } else if (practicedMatching.length === 0 && matchingPlays.length === 0) {
+        // Gap: no plays in playbook for this situation
+        gaps.push({
+          concept_missing: prio.situation.replace('_', ' '),
+          recommendation: `Add ${prio.situation.replace('_', ' ')} plays to playbook`,
+          priority: 'high'
+        });
+      } else {
+        // Good: have practiced plays
+        const topPracticed = practicedMatching
+          .sort((a, b) => (playPracticeCount[b.id] || 0) - (playPracticeCount[a.id] || 0))
+          .slice(0, 2);
+
+        for (const play of topPracticed) {
+          recommendations.push({
+            priority_rank: recommendations.length + 1,
+            play_id: play.id,
+            play_name: play.name,
+            situation: prio.situation,
+            readiness_status: 'practiced_recently',
+            confidence_level: 'high',
+            why_recommended: `Solid ${prio.situation.replace('_', ' ')} option with recent reps`,
+            coaching_point: `Practiced ${playPracticeCount[play.id]} times in last 2 weeks`,
+            assumption: 'Recent practice indicates readiness'
+          });
+        }
+      }
+    }
+
+    // Add opponent-specific recommendations if opponent data available
+    if (opponent) {
+      // Check opponent tendencies and recommend counters
+      if (opponent.defensive_tendencies) {
+        const defensiveNotes = opponent.defensive_tendencies.toLowerCase();
+        
+        if (defensiveNotes.includes('blitz')) {
+          const blitzBeaters = allPlays.filter(p => 
+            p.play_type === 'screen' || p.play_type === 'play_action'
+          ).filter(p => practicedPlayIds.has(p.id));
+
+          if (blitzBeaters.length > 0) {
+            recommendations.push({
+              priority_rank: recommendations.length + 1,
+              play_id: blitzBeaters[0].id,
+              play_name: blitzBeaters[0].name,
+              situation: 'blitz_response',
+              readiness_status: 'practiced_recently',
+              confidence_level: 'medium',
+              why_recommended: 'Opponent shows frequent blitzes - need quick-game answers',
+              coaching_point: 'Emphasize hot reads and protection adjustments',
+              assumption: 'Opponent blitz tendency creates opportunity'
+            });
+          }
+        }
+
+        if (defensiveNotes.includes('cover 2') || defensiveNotes.includes('two-high')) {
+          const deepShots = allPlays.filter(p => 
+            p.concept && (p.concept.toLowerCase().includes('post') || p.concept.toLowerCase().includes('deep'))
+          );
+
+          if (deepShots.length > 0) {
+            const play = deepShots[0];
+            recommendations.push({
+              priority_rank: recommendations.length + 1,
+              play_id: play.id,
+              play_name: play.name,
+              situation: 'explosive_play',
+              readiness_status: practicedPlayIds.has(play.id) ? 'practiced_recently' : 'new_this_week',
+              confidence_level: 'medium',
+              why_recommended: 'Two-high safeties create one-on-one outside matchups',
+              coaching_point: 'Attack boundaries with play action',
+              assumption: 'Opponent coverage scheme vulnerable to deep shots'
+            });
+          }
+        }
+      }
+    }
+
+    // Sort by priority and limit
+    recommendations.sort((a, b) => a.priority_rank - b.priority_rank);
+    const topRecommendations = recommendations.slice(0, 12);
+
+    // Build game plan summary
+    const practicedCount = allPlays.filter(p => practicedPlayIds.has(p.id)).length;
+    const totalPlays = allPlays.length;
+    const readinessPercentage = Math.round((practicedCount / totalPlays) * 100) || 0;
+
+    const gamePlanSummary = `
+Based on your ${side_of_ball} playbook (${totalPlays} plays) and practice history:
+• ${practicedCount} plays (${readinessPercentage}%) practiced in last 2 weeks
+• ${gaps.length} situational gaps identified
+• ${topRecommendations.length} priority recommendations for this week
+
+Focus areas: ${gaps.map(g => g.concept_missing).join(', ') || 'All situations covered'}
+    `.trim();
 
     return Response.json({
-      recommendations: aiResponse.recommendations || [],
-      gaps: aiResponse.gaps || [],
-      game_plan_summary: aiResponse.game_plan_summary || '',
-      generated_at: new Date().toISOString(),
-      generated_by: user.full_name
+      recommendations: topRecommendations,
+      gaps,
+      game_plan_summary: gamePlanSummary,
+      metadata: {
+        total_plays_analyzed: totalPlays,
+        practiced_plays: practicedCount,
+        scripts_reviewed: recentScripts.length,
+        generated_at: new Date().toISOString()
+      }
     });
 
   } catch (error) {

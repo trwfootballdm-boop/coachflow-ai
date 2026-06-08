@@ -1,487 +1,230 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTeam } from '@/components/TeamContext';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Brain, Calendar, Target, Shield, Zap, AlertCircle, AlertTriangle,
-  FileText, ClipboardList, Loader2, CheckCircle2,
-  ChevronRight, X, Plus
-} from "lucide-react";
-import { format } from 'date-fns';
-import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sparkles, Calendar, Shield, Zap, Loader2, AlertTriangle, CheckCircle2, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
-import AIRecommendationCard from '@/components/weekly-install/AIRecommendationCard';
-import ReadinessPanel from '@/components/weekly-install/ReadinessPanel';
-import PlanReviewPanel from '@/components/weekly-install/PlanReviewPanel';
+const CALL_SHEET_SECTIONS = [
+  ['openers', 'Openers'], ['base_run', 'Base Runs'], ['base_pass', 'Base Passes'],
+  ['third_short', '3rd & Short'], ['red_zone', 'Red Zone'], ['goal_line', 'Goal Line'],
+  ['shot_plays', 'Shot Plays'], ['two_minute', '2-Min'],
+];
 
 export default function WeeklyInstallPlanner() {
   const { activeTeamId } = useTeam();
   const queryClient = useQueryClient();
-  
-  const [step, setStep] = useState(1);
-  const [selectedOpponent, setSelectedOpponent] = useState(null);
+  const [selectedOpponentId, setSelectedOpponentId] = useState('');
+  const [selectedGamePlanId, setSelectedGamePlanId] = useState('');
   const [weekNumber, setWeekNumber] = useState(1);
-  const [sideOfBall, setSideOfBall] = useState('all');
-  const [generatedPlan, setGeneratedPlan] = useState(null);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
-  // Fetch opponents
   const { data: opponents = [] } = useQuery({
     queryKey: ['opponents', activeTeamId],
     queryFn: () => base44.entities.Opponent.filter({ team_id: activeTeamId }, 'game_date'),
     enabled: !!activeTeamId,
   });
 
-  // Fetch existing weekly plans
-  const { data: existingPlans = [] } = useQuery({
-    queryKey: ['weeklyPlans', activeTeamId],
-    queryFn: () => base44.entities.WeeklyInstallPlan.filter({ team_id: activeTeamId }, '-week_number'),
+  const { data: gamePlans = [] } = useQuery({
+    queryKey: ['gamePlans', activeTeamId],
+    queryFn: () => base44.entities.GamePlan.filter({ team_id: activeTeamId }, '-updated_date'),
     enabled: !!activeTeamId,
   });
 
-  // Generate plan mutation
-  const generatePlanMutation = useMutation({
-    mutationFn: async () => {
-      setIsGenerating(true);
-      try {
-        const response = await base44.functions.invoke('generateWeeklyPlan', {
-          team_id: activeTeamId,
-          opponent_id: selectedOpponent?.id,
-          week_number: weekNumber,
-          side_of_ball: sideOfBall,
-        });
-        return response;
-      } finally {
-        setIsGenerating(false);
-      }
-    },
-    onSuccess: (data) => {
-      if (data.success) {
-        setGeneratedPlan(data.plan);
-        setStep(2);
-        toast.success('Weekly plan generated');
-      } else {
-        toast.error('Failed to generate plan');
-      }
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to generate plan');
-    },
+  const { data: plays = [] } = useQuery({
+    queryKey: ['plays', activeTeamId],
+    queryFn: () => base44.entities.Play.filter({ team_id: activeTeamId }, 'name'),
+    enabled: !!activeTeamId,
   });
 
-  // Push to practice script
-  const pushToPracticeMutation = useMutation({
-    mutationFn: async () => {
-      // Create practice script from plan
-      const script = await base44.entities.PracticeScript.create({
-        team_id: activeTeamId,
-        title: `Week ${weekNumber} Install - ${sideOfBall}`,
-        practice_day: 'tuesday_team',
-        script_date: new Date().toISOString().split('T')[0],
-        focus_area: 'Game Plan Install',
-        coaching_emphasis: generatedPlan?.offense_plan?.practice_emphasis || generatedPlan?.defense_plan?.practice_emphasis,
-        generated_by_ai: true,
-      });
-
-      // Add plays to script
-      const playsToAdd = [
-        ...(generatedPlan?.offense_plan?.opener_play_ids || []),
-        ...(generatedPlan?.offense_plan?.core_play_ids || []),
-        ...(generatedPlan?.defense_plan?.base_front_play_ids || []),
-      ].filter(Boolean);
-
-      for (const playId of playsToAdd) {
-        await base44.entities.PracticeScriptItem.create({
-          practice_script_id: script.id,
-          play_id: playId,
-          period_label: 'Team Period',
-          reps_target: 10,
-          emphasis_level: 'high',
-        });
-      }
-
-      // Update plan with pushed script ID
-      await base44.entities.WeeklyInstallPlan.update(generatedPlan.id, {
-        pushed_to_practice_script_id: script.id,
-        status: 'pushed_to_practice',
-      });
-
-      return script;
+  const { data: scriptItems = [] } = useQuery({
+    queryKey: ['allScriptItems', activeTeamId],
+    queryFn: async () => {
+      const scripts = await base44.entities.PracticeScript.filter({ team_id: activeTeamId }, '-script_date', 5);
+      if (!scripts.length) return [];
+      const all = await Promise.all(scripts.map(s => base44.entities.PracticeScriptItem.filter({ practice_script_id: s.id })));
+      return all.flat();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['practiceScripts'] });
-      toast.success('Pushed to practice script');
-    },
+    enabled: !!activeTeamId,
   });
 
-  // Push to game plan
-  const pushToGamePlanMutation = useMutation({
-    mutationFn: async () => {
-      // Create or update game plan
-      let gamePlan = existingPlans.find(p => p.week_number === weekNumber);
-      
-      if (!gamePlan) {
-        gamePlan = await base44.entities.GamePlan.create({
-          team_id: activeTeamId,
-          title: `Week ${weekNumber} Game Plan`,
-          week_label: `Week ${weekNumber}`,
-          status: 'draft',
-          call_sheet: {},
+  const playMap = useMemo(() => {
+    const m = {};
+    plays.forEach(p => { m[p.id] = p; });
+    return m;
+  }, [plays]);
+
+  const practicedIds = useMemo(() =>
+    new Set(scriptItems.map(i => i.play_id).filter(Boolean)),
+    [scriptItems]
+  );
+
+  const selectedPlan = gamePlans.find(p => p.id === selectedGamePlanId);
+  const selectedOpponent = opponents.find(o => o.id === selectedOpponentId);
+
+  // Build readiness gaps from call sheet vs practiced plays
+  const readinessGaps = useMemo(() => {
+    if (!selectedPlan?.call_sheet) return [];
+    const callSheet = selectedPlan.call_sheet;
+    const gaps = [];
+    CALL_SHEET_SECTIONS.forEach(([key, label]) => {
+      const entries = callSheet[key] || [];
+      const unprepped = entries.filter(e => e.play_id && !practicedIds.has(e.play_id));
+      if (unprepped.length > 0) {
+        gaps.push({
+          section: label,
+          count: unprepped.length,
+          plays: unprepped.map(e => playMap[e.play_id]?.name || playMap[e.play_id]?.play_name || 'Unknown'),
         });
       }
+    });
+    return gaps;
+  }, [selectedPlan, practicedIds, playMap]);
 
-      // Update call sheet with recommended plays
-      const callSheet = { ...gamePlan.call_sheet };
-      
-      if (generatedPlan?.offense_plan?.opener_play_ids) {
-        callSheet.openers = generatedPlan.offense_plan.opener_play_ids.map((playId, idx) => ({
-          play_id: playId,
-          is_opener: true,
-          opener_sequence: idx + 1,
-          call_sheet_priority: 1,
-          practiced_this_week: true,
-        }));
-      }
+  const totalCallSheetPlays = useMemo(() => {
+    if (!selectedPlan?.call_sheet) return 0;
+    const callSheet = selectedPlan.call_sheet;
+    return Object.values(callSheet).flat().length;
+  }, [selectedPlan]);
 
-      if (generatedPlan?.offense_plan?.red_zone_plan) {
-        callSheet.red_zone = generatedPlan.offense_plan.red_zone_plan.map(playId => ({
-          play_id: playId,
-          call_sheet_priority: 2,
-          practiced_this_week: true,
-        }));
-      }
+  const practicedOnSheet = useMemo(() => {
+    if (!selectedPlan?.call_sheet) return 0;
+    const callSheet = selectedPlan.call_sheet;
+    return Object.values(callSheet).flat().filter(e => e.play_id && practicedIds.has(e.play_id)).length;
+  }, [selectedPlan, practicedIds]);
 
-      await base44.entities.GamePlan.update(gamePlan.id, { call_sheet });
-      await base44.entities.WeeklyInstallPlan.update(generatedPlan.id, {
-        pushed_to_game_plan_id: gamePlan.id,
-        status: 'approved',
-      });
-
-      return gamePlan;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['gamePlans'] });
-      toast.success('Pushed to game plan');
-    },
-  });
-
-  const handleGenerate = () => {
-    if (!selectedOpponent && sideOfBall !== 'special_teams') {
-      toast.warning('Select an opponent for better recommendations');
+  const handleAutoGenerate = async () => {
+    if (!selectedOpponentId && !selectedGamePlanId) {
+      toast.error('Select an opponent or game plan first');
+      return;
     }
-    generatePlanMutation.mutate();
-  };
-
-  const handleReset = () => {
-    setStep(1);
-    setGeneratedPlan(null);
-    setSelectedOpponent(null);
+    setGenerating(true);
+    try {
+      await base44.integrations.Core.InvokeLLM({
+        prompt: `You are a football coaching assistant. Generate a brief weekly install plan summary for week ${weekNumber}${selectedOpponent ? ` vs ${selectedOpponent.name}` : ''}. List 3-5 install priorities as short bullet points. Keep it practical and specific.`,
+      });
+      toast.success('Install plan generated');
+    } catch {
+      toast.error('Generation failed');
+    }
+    setGenerating(false);
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 max-w-7xl">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-display font-bold">AI Weekly Install Engine</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Generate opponent-specific game plans with AI-assisted recommendations
-          </p>
+          <h1 className="text-2xl font-display font-bold">Weekly Install Planner</h1>
+          <p className="text-sm text-muted-foreground">Plan your weekly install priorities based on your opponent and call sheet.</p>
         </div>
-        {step === 2 && (
-          <Button variant="outline" size="sm" onClick={handleReset} className="gap-2">
-            <X className="h-4 w-4" /> Start Over
-          </Button>
-        )}
+        <Button onClick={handleAutoGenerate} disabled={generating} className="gap-2 rounded-xl">
+          {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          AI Install Plan
+        </Button>
       </div>
 
-      {/* Step 1: Configuration */}
-      {step === 1 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Opponent Selection */}
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Brain className="h-5 w-5 text-primary" />
-                Select Opponent
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {opponents.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-sm text-muted-foreground mb-3">No opponents added yet</p>
-                  <Button variant="outline" size="sm">Add Opponent</Button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {opponents.map(opponent => (
-                    <button
-                      key={opponent.id}
-                      onClick={() => setSelectedOpponent(opponent)}
-                      className={cn(
-                        "text-left border rounded-lg p-3 transition-all hover:shadow-md",
-                        selectedOpponent?.id === opponent.id
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50"
-                      )}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-sm">{opponent.name}</span>
-                        {selectedOpponent?.id === opponent.id && (
-                          <CheckCircle2 className="h-4 w-4 text-primary" />
-                        )}
-                      </div>
-                      {opponent.game_date && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {format(new Date(opponent.game_date), 'MMM d, yyyy')}
-                        </p>
-                      )}
-                      {opponent.base_defense && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Defense: {opponent.base_defense}
-                        </p>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+      {/* Setup selectors */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Week</label>
+          <Select value={String(weekNumber)} onValueChange={v => setWeekNumber(parseInt(v))}>
+            <SelectTrigger className="rounded-xl">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 16 }, (_, i) => (
+                <SelectItem key={i + 1} value={String(i + 1)}>Week {i + 1}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Opponent</label>
+          <Select value={selectedOpponentId} onValueChange={setSelectedOpponentId}>
+            <SelectTrigger className="rounded-xl">
+              <SelectValue placeholder="Select opponent…" />
+            </SelectTrigger>
+            <SelectContent>
+              {opponents.map(o => (
+                <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Game Plan</label>
+          <Select value={selectedGamePlanId} onValueChange={setSelectedGamePlanId}>
+            <SelectTrigger className="rounded-xl">
+              <SelectValue placeholder="Select game plan…" />
+            </SelectTrigger>
+            <SelectContent>
+              {gamePlans.map(gp => (
+                <SelectItem key={gp.id} value={gp.id}>{gp.title}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-          {/* Week & Side Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
-                Week & Focus
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-xs font-medium mb-1.5 block">Week Number</label>
-                <Input
-                  type="number"
-                  min="1"
-                  max="15"
-                  value={weekNumber}
-                  onChange={(e) => setWeekNumber(parseInt(e.target.value) || 1)}
-                  className="h-9"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium mb-1.5 block">Side of Ball</label>
-                <div className="space-y-2">
-                  {[
-                    { value: 'all', label: 'Offense & Defense' },
-                    { value: 'offense', label: 'Offense Only' },
-                    { value: 'defense', label: 'Defense Only' },
-                    { value: 'special_teams', label: 'Special Teams' },
-                  ].map(option => (
-                    <button
-                      key={option.value}
-                      onClick={() => setSideOfBall(option.value)}
-                      className={cn(
-                        "w-full text-left text-sm px-3 py-2 rounded-lg border transition-all",
-                        sideOfBall === option.value
-                          ? "border-primary bg-primary/5 text-primary font-medium"
-                          : "border-border hover:border-primary/50"
-                      )}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <Button 
-                onClick={handleGenerate} 
-                className="w-full gap-2 mt-4"
-                disabled={isGenerating}
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Generating Plan...
-                  </>
-                ) : (
-                  <>
-                    <Brain className="h-4 w-4" />
-                    Generate AI Plan
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
+      {/* Readiness overview */}
+      {selectedPlan && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="border border-border rounded-xl p-4 bg-card">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">On Call Sheet</p>
+            <p className="text-2xl font-display font-bold">{totalCallSheetPlays}</p>
+            <p className="text-xs text-muted-foreground">plays scripted</p>
+          </div>
+          <div className="border border-border rounded-xl p-4 bg-card">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Practiced</p>
+            <p className="text-2xl font-display font-bold text-emerald-600">{practicedOnSheet}</p>
+            <p className="text-xs text-muted-foreground">of {totalCallSheetPlays} plays</p>
+          </div>
+          <div className="border border-border rounded-xl p-4 bg-card">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Not Repped</p>
+            <p className={cn("text-2xl font-display font-bold", totalCallSheetPlays - practicedOnSheet > 0 ? "text-amber-600" : "text-emerald-600")}>
+              {totalCallSheetPlays - practicedOnSheet}
+            </p>
+            <p className="text-xs text-muted-foreground">plays need reps</p>
+          </div>
         </div>
       )}
 
-      {/* Step 2: Review Plan */}
-      {step === 2 && generatedPlan && (
-        <div className="space-y-6">
-          {/* Opponent Summary & Readiness */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Brain className="h-5 w-5 text-primary" />
-                  Opponent Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                {generatedPlan.opponent_summary && (
-                  <>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs font-bold text-muted-foreground uppercase">Base Offense</p>
-                        <p className="font-medium">{generatedPlan.opponent_summary.base_offense}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-muted-foreground uppercase">Base Defense</p>
-                        <p className="font-medium">{generatedPlan.opponent_summary.base_defense}</p>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-muted-foreground uppercase mb-1">Tendencies</p>
-                      <p className="text-muted-foreground">{generatedPlan.opponent_summary.offensive_tendencies}</p>
-                    </div>
-                    {generatedPlan.opponent_summary.weaknesses && (
-                      <div>
-                        <p className="text-xs font-bold text-muted-foreground uppercase mb-1">Exploitable Weaknesses</p>
-                        <p className="text-emerald-600 dark:text-emerald-400">{generatedPlan.opponent_summary.weaknesses}</p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            <ReadinessPanel team_readiness={generatedPlan.team_readiness} />
+      {/* Readiness gaps */}
+      {readinessGaps.length > 0 && (
+        <div className="border border-border rounded-xl bg-card overflow-hidden">
+          <div className="px-4 py-3 border-b border-border bg-amber-500/5">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <h3 className="font-display font-semibold text-sm">Readiness Gaps</h3>
+              <span className="text-xs text-muted-foreground">{readinessGaps.length} sections with unprepped plays</span>
+            </div>
           </div>
-
-          {/* Install Priorities */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-primary" />
-                Install Priorities
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(generatedPlan.install_priorities || []).map((priority, idx) => (
-                  <AIRecommendationCard 
-                    key={idx}
-                    priority={priority}
-                    index={idx + 1}
-                  />
-                ))}
+          <div className="divide-y divide-border">
+            {readinessGaps.map((gap, i) => (
+              <div key={i} className="flex items-center justify-between px-4 py-3">
+                <div>
+                  <p className="text-sm font-semibold">{gap.section}</p>
+                  <p className="text-xs text-muted-foreground">{gap.plays.slice(0, 3).join(', ')}{gap.plays.length > 3 ? ` +${gap.plays.length - 3} more` : ''}</p>
+                </div>
+                <Badge variant="outline" className="text-amber-600 border-amber-400/30 bg-amber-400/5">
+                  {gap.count} unprepped
+                </Badge>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Offense Plan */}
-          {sideOfBall !== 'defense' && generatedPlan.offense_plan && (
-            <PlanReviewPanel 
-              title="Offense Plan"
-              icon={<Target className="h-5 w-5 text-emerald-500" />}
-              plan={generatedPlan.offense_plan}
-              type="offense"
-              onPushToPractice={() => pushToPracticeMutation.mutate()}
-              onPushToGamePlan={() => pushToGamePlanMutation.mutate()}
-            />
-          )}
-
-          {/* Defense Plan */}
-          {sideOfBall !== 'offense' && generatedPlan.defense_plan && (
-            <PlanReviewPanel 
-              title="Defense Plan"
-              icon={<Shield className="h-5 w-5 text-blue-500" />}
-              plan={generatedPlan.defense_plan}
-              type="defense"
-              onPushToPractice={() => pushToPracticeMutation.mutate()}
-              onPushToGamePlan={() => pushToGamePlanMutation.mutate()}
-            />
-          )}
-
-          {/* Readiness Warnings */}
-          {(generatedPlan.readiness_warnings || []).length > 0 && (
-            <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-                  <AlertTriangle className="h-5 w-5" />
-                  Readiness Warnings
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {generatedPlan.readiness_warnings.map((warning, idx) => (
-                    <li key={idx} className="text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
-                      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                      {warning}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* AI Assumptions */}
-          {(generatedPlan.ai_assumptions || []).length > 0 && (
-            <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
-                  <Zap className="h-5 w-5" />
-                  AI Assumptions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {generatedPlan.ai_assumptions.map((assumption, idx) => (
-                    <li key={idx} className="text-sm text-blue-800 dark:text-blue-300 flex items-start gap-2">
-                      <Zap className="h-4 w-4 shrink-0 mt-0.5" />
-                      {assumption}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-3 pt-4 border-t border-border">
-            <Button 
-              onClick={() => pushToPracticeMutation.mutate()} 
-              className="gap-2"
-              disabled={pushToPracticeMutation.isPending}
-            >
-              {pushToPracticeMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <FileText className="h-4 w-4" />
-              )}
-              Push to Practice Script
-            </Button>
-            <Button 
-              onClick={() => pushToGamePlanMutation.mutate()} 
-              variant="outline" 
-              className="gap-2"
-              disabled={pushToGamePlanMutation.isPending}
-            >
-              {pushToGamePlanMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <ClipboardList className="h-4 w-4" />
-              )}
-              Push to Game Plan
-            </Button>
+            ))}
           </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!selectedGamePlanId && (
+        <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-border rounded-2xl">
+          <Calendar className="h-10 w-10 text-muted-foreground/30 mb-3" />
+          <h3 className="font-display font-semibold">Select a game plan to start</h3>
+          <p className="text-sm text-muted-foreground mt-1">Choose a game plan above to see your weekly install readiness.</p>
         </div>
       )}
     </div>
