@@ -1,0 +1,252 @@
+{
+  "name": "PlayVersion",
+  "type": "object",
+  "properties": {
+    "play_id": {
+      "type": "string",
+      "description": "Reference to Play (parent)"
+    },
+    "team_id": {
+      "type": "string",
+      "description": "Reference to Team"
+    },
+    "version_number": {
+      "type": "integer",
+      "default": 1
+    },
+    "version_label": {
+      "type": "string",
+      "description": "e.g. Base, Red Zone, Mirror, Scout Safe, Youth"
+    },
+    "variation_type": {
+      "type": "string",
+      "enum": [
+        "base",
+        "mirror",
+        "red_zone",
+        "goal_line",
+        "install",
+        "opponent_specific",
+        "youth_simplified",
+        "scout_safe",
+        "custom"
+      ],
+      "default": "base"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Active/default version"
+    },
+    "diagram_json": {
+      "type": "object",
+      "description": "Full visual diagram: players, paths, annotations, ball"
+    },
+    "formation_snapshot_id": {
+      "type": "string",
+      "description": "Reference to FormationSnapshot"
+    },
+    "field_template_id": {
+      "type": "string",
+      "description": "Reference to FieldTemplate"
+    },
+    "paths": {
+      "type": "array",
+      "description": "Route/block/motion path objects",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path_id": {
+            "type": "string"
+          },
+          "token_id": {
+            "type": "string",
+            "description": "Player this path belongs to"
+          },
+          "path_type": {
+            "type": "string",
+            "enum": [
+              "run_path",
+              "pass_route",
+              "blocking_track",
+              "pull_path",
+              "motion_path",
+              "blitz_path",
+              "pursuit_path",
+              "zone_drop",
+              "contain_path",
+              "ball_path",
+              "fake_path"
+            ]
+          },
+          "points": {
+            "type": "array",
+            "description": "Array of {x, y} control points"
+          },
+          "curve_type": {
+            "type": "string",
+            "enum": [
+              "straight",
+              "curved",
+              "arc"
+            ],
+            "default": "straight"
+          },
+          "arrowhead": {
+            "type": "string",
+            "enum": [
+              "none",
+              "open",
+              "filled",
+              "double",
+              "flat"
+            ],
+            "default": "open"
+          },
+          "line_style": {
+            "type": "string",
+            "enum": [
+              "solid",
+              "dashed",
+              "dotted",
+              "wavy"
+            ],
+            "default": "solid"
+          },
+          "stroke_color": {
+            "type": "string"
+          },
+          "stroke_width": {
+            "type": "number",
+            "default": 2
+          },
+          "visible": {
+            "type": "boolean",
+            "default": true
+          },
+          "layer": {
+            "type": "string",
+            "enum": [
+              "offense",
+              "defense",
+              "ball",
+              "annotation"
+            ],
+            "default": "offense"
+          }
+        }
+      }
+    },
+    "annotations": {
+      "type": "array",
+      "description": "Text labels, zone markers, read progressions, callouts",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ann_id": {
+            "type": "string"
+          },
+          "ann_type": {
+            "type": "string",
+            "enum": [
+              "text_label",
+              "coaching_note",
+              "read_progression",
+              "zone_marker",
+              "callout",
+              "arrow",
+              "landmark",
+              "player_note",
+              "print_only"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "style": {
+            "type": "object"
+          },
+          "visible_in_modes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "animation_timeline": {
+      "type": "object",
+      "description": "Play animation timing data",
+      "properties": {
+        "total_duration_ms": {
+          "type": "integer",
+          "default": 4000
+        },
+        "snap_time_ms": {
+          "type": "integer",
+          "default": 500
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "event_id": {
+                "type": "string"
+              },
+              "event_type": {
+                "type": "string",
+                "enum": [
+                  "pre_snap_motion",
+                  "snap",
+                  "handoff",
+                  "mesh",
+                  "fake",
+                  "route_release",
+                  "route_break",
+                  "ball_throw",
+                  "ball_catch",
+                  "block_engage",
+                  "end_state"
+                ]
+              },
+              "time_ms": {
+                "type": "integer"
+              },
+              "token_id": {
+                "type": "string"
+              },
+              "path_id": {
+                "type": "string"
+              },
+              "note": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "cloned_from_version_id": {
+      "type": "string",
+      "description": "Source version if cloned"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "thumbnail_url": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "play_id",
+    "team_id"
+  ]
+}

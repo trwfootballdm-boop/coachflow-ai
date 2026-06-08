@@ -1,0 +1,72 @@
+{
+  "name": "FieldTemplate",
+  "type": "object",
+  "properties": {
+    "template_name": {
+      "type": "string",
+      "description": "Template name e.g. Youth Half Field, Red Zone"
+    },
+    "sport_variant": {
+      "type": "string",
+      "default": "american_football"
+    },
+    "level_type": {
+      "type": "string",
+      "enum": [
+        "youth",
+        "middle_school",
+        "high_school",
+        "custom"
+      ],
+      "description": "Age/level"
+    },
+    "field_scope": {
+      "type": "string",
+      "enum": [
+        "full_field",
+        "half_field",
+        "red_zone",
+        "goal_line",
+        "custom"
+      ],
+      "description": "Field view scope"
+    },
+    "hash_style": {
+      "type": "string",
+      "enum": [
+        "youth",
+        "high_school",
+        "college",
+        "pro",
+        "none"
+      ],
+      "default": "high_school"
+    },
+    "default_ball_position": {
+      "type": "string",
+      "enum": [
+        "left_hash",
+        "middle",
+        "right_hash"
+      ],
+      "default": "middle"
+    },
+    "dimensions_json": {
+      "type": "object",
+      "description": "Canvas width/height, yard line offsets, end zone depth"
+    },
+    "line_config_json": {
+      "type": "object",
+      "description": "Yard line spacing, hash positions, sideline margins, colors"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "template_name",
+    "level_type",
+    "field_scope"
+  ]
+}
