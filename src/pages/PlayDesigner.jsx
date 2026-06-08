@@ -1,23 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTeam } from '@/components/TeamContext';
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Save, ArrowLeft, Loader2, Star, Copy, ClipboardList, FileText,
-  Power, PowerOff, Trash2, ChevronDown, AlertCircle
-} from "lucide-react";
 import { useNavigate } from 'react-router-dom';
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+import PlayEditorHeader from '@/components/play-editor/PlayEditorHeader';
 import OverviewTab from '@/components/play-editor/OverviewTab';
 import AssignmentsTab from '@/components/play-editor/AssignmentsTab';
 import TagsTab from '@/components/play-editor/TagsTab';
 import DiagramTab from '@/components/play-editor/DiagramTab';
 import NotesTab from '@/components/play-editor/NotesTab';
 import HistoryTab from '@/components/play-editor/HistoryTab';
+import PlaySummaryPanel from '@/components/play-editor/PlaySummaryPanel';
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -28,20 +25,17 @@ const TABS = [
   { id: 'history', label: 'History' },
 ];
 
-const BLANK_PLAY = {
-  name: '', short_name: '', side: 'offense', run_pass: '', play_type: '',
-  play_family: '', formation: '', personnel: '', motion: '', strength: 'any',
-  concept: '', direction: 'any', hash_tags: ['any'], down_distance_tags: [],
-  field_zone_tags: ['any'], opponent_front_tags: [], coverage_tags: [],
-  install_week: null, install_day: null, age_level_difficulty: '', risk_level: 'medium',
-  coaching_points: '', player_friendly_text: '', notes: '', tags: [],
+const EMPTY_PLAY = {
+  name: '', play_name: '', short_name: '',
+  side: 'offense', run_pass: '', play_type: '', play_family: '',
+  formation: '', personnel: '', motion: '', strength: 'any',
+  concept: '', direction: 'any',
+  hash_tags: [], down_distance_tags: [], field_zone_tags: [],
+  opponent_front_tags: [], coverage_tags: [], tags: [],
+  install_week: null, install_day: null,
+  age_level_difficulty: '', risk_level: 'medium',
+  coaching_points: '', player_friendly_text: '', notes: '',
   is_favorite: false, is_active: true, version: 1, diagram_data: null,
-};
-
-const SIDE_BADGE = {
-  offense: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
-  defense: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20',
-  special_teams: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20',
 };
 
 export default function PlayDesigner() {
@@ -50,15 +44,16 @@ export default function PlayDesigner() {
   const queryClient = useQueryClient();
   const urlParams = new URLSearchParams(window.location.search);
   const editId = urlParams.get('id');
+  const isNew = !editId;
 
-  const [play, setPlay] = useState({ ...BLANK_PLAY, team_id: activeTeamId });
+  const [play, setPlay] = useState({ ...EMPTY_PLAY, team_id: activeTeamId });
   const [savedPlay, setSavedPlay] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(!!editId);
 
-  const isDirty = savedPlay && JSON.stringify(play) !== JSON.stringify(savedPlay);
+  // Track unsaved changes
+  const isDirty = savedPlay ? JSON.stringify(play) !== JSON.stringify(savedPlay) : !isNew;
 
-  // Load existing play
   useEffect(() => {
     if (editId) {
       setLoading(true);
@@ -72,70 +67,102 @@ export default function PlayDesigner() {
     }
   }, [editId]);
 
-  // Related data counts
+  // Sync team_id when it changes
+  useEffect(() => {
+    if (activeTeamId && isNew) {
+      setPlay(prev => ({ ...prev, team_id: activeTeamId }));
+    }
+  }, [activeTeamId, isNew]);
+
   const { data: assignments = [] } = useQuery({
     queryKey: ['assignments', editId],
     queryFn: () => base44.entities.PlayAssignment.filter({ play_id: editId }),
     enabled: !!editId,
   });
 
-  const allTags = [
-    ...(play.down_distance_tags || []),
-    ...(play.field_zone_tags || []).filter(t => t !== 'any'),
-    ...(play.opponent_front_tags || []),
-    ...(play.coverage_tags || []),
-    ...(play.tags || []),
-  ].filter(Boolean);
-
-  const hasDiagram = !!(play.diagram_data && Object.keys(play.diagram_data || {}).length > 0);
+  const { data: diagrams = [] } = useQuery({
+    queryKey: ['diagrams', editId],
+    queryFn: () => base44.entities.PlayDiagram.filter({ play_id: editId }),
+    enabled: !!editId,
+  });
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       const payload = { ...data, team_id: activeTeamId };
+      // Sync name fields
+      if (payload.name) payload.play_name = payload.name;
+      if (payload.play_name && !payload.name) payload.name = payload.play_name;
       if (editId) return base44.entities.Play.update(editId, payload);
       return base44.entities.Play.create(payload);
     },
-    onSuccess: (result) => {
+    onSuccess: (saved) => {
       queryClient.invalidateQueries({ queryKey: ['plays'] });
-      setSavedPlay(play);
-      toast.success(editId ? 'Play updated' : 'Play saved');
-      if (!editId && result?.id) {
-        navigate(`/play-designer?id=${result.id}`, { replace: true });
+      setSavedPlay({ ...play });
+      toast.success(editId ? 'Play updated' : 'Play created');
+      if (isNew && saved?.id) {
+        navigate(`/play-designer?id=${saved.id}`, { replace: true });
       }
     },
   });
 
-  const handleSaveAsVersion = useCallback(async () => {
+  const duplicateMutation = useMutation({
+    mutationFn: async () => {
+      const { id, created_date, updated_date, created_by_id, ...data } = play;
+      return base44.entities.Play.create({
+        ...data, team_id: activeTeamId,
+        name: `${play.name || play.play_name} (Copy)`,
+        play_name: `${play.name || play.play_name} (Copy)`,
+      });
+    },
+    onSuccess: (newPlay) => {
+      queryClient.invalidateQueries({ queryKey: ['plays'] });
+      toast.success('Play duplicated');
+      navigate(`/play-designer?id=${newPlay.id}`);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => base44.entities.Play.delete(editId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plays'] });
+      toast.success('Play deleted');
+      navigate('/play-library');
+    },
+  });
+
+  const handleSaveNewVersion = async () => {
     const { id, created_date, updated_date, created_by_id, ...data } = play;
     const newVersion = (play.version || 1) + 1;
-    const created = await base44.entities.Play.create({ ...data, team_id: activeTeamId, version: newVersion, name: `${data.name} (v${newVersion})` });
+    const created = await base44.entities.Play.create({
+      ...data, team_id: activeTeamId,
+      version: newVersion,
+      name: play.name || play.play_name,
+      play_name: play.name || play.play_name,
+    });
     queryClient.invalidateQueries({ queryKey: ['plays'] });
     toast.success(`Saved as version ${newVersion}`);
     navigate(`/play-designer?id=${created.id}`);
-  }, [play, activeTeamId, navigate, queryClient]);
-
-  const handleDuplicate = useCallback(async () => {
-    const { id, created_date, updated_date, created_by_id, ...data } = play;
-    const created = await base44.entities.Play.create({ ...data, team_id: activeTeamId, name: `${data.name} (Copy)`, version: 1 });
-    queryClient.invalidateQueries({ queryKey: ['plays'] });
-    toast.success('Play duplicated');
-    navigate(`/play-designer?id=${created.id}`);
-  }, [play, activeTeamId, navigate, queryClient]);
-
-  const handleToggleActive = () => {
-    setPlay(prev => ({ ...prev, is_active: prev.is_active === false ? true : false }));
   };
 
-  const handleDelete = async () => {
-    if (!editId) return;
-    if (!window.confirm(`Delete "${play.name}"? This cannot be undone.`)) return;
-    await base44.entities.Play.delete(editId);
-    queryClient.invalidateQueries({ queryKey: ['plays'] });
-    toast.success('Play deleted');
-    navigate('/play-library');
+  const validate = () => {
+    const name = play.name || play.play_name;
+    if (!name?.trim()) { toast.error('Play name is required'); return false; }
+    return true;
   };
 
-  const canSave = !!play.name;
+  const handleSave = () => {
+    if (!validate()) return;
+    saveMutation.mutate(play);
+  };
+
+  const allTagCount = [
+    ...(play.down_distance_tags || []),
+    ...(play.field_zone_tags || []),
+    ...(play.hash_tags || []),
+    ...(play.opponent_front_tags || []),
+    ...(play.coverage_tags || []),
+    ...(play.tags || []),
+  ].filter(t => t && t !== 'any').length;
 
   if (loading) {
     return (
@@ -146,167 +173,104 @@ export default function PlayDesigner() {
   }
 
   return (
-    <div className="-m-6 flex flex-col h-[calc(100vh-64px)] overflow-hidden">
+    <div className="-m-6 flex flex-col h-[calc(100vh-0px)] overflow-hidden">
+      {/* Sticky header */}
+      <PlayEditorHeader
+        play={play}
+        isDirty={isDirty}
+        isSaving={saveMutation.isPending}
+        isNew={isNew}
+        onBack={() => navigate('/play-library')}
+        onSave={handleSave}
+        onSaveNewVersion={handleSaveNewVersion}
+        onDuplicate={() => duplicateMutation.mutate()}
+        onToggleFav={() => setPlay(p => ({ ...p, is_favorite: !p.is_favorite }))}
+        onToggleActive={() => setPlay(p => ({ ...p, is_active: p.is_active === false ? true : false }))}
+        onDelete={() => {
+          if (window.confirm('Delete this play? This cannot be undone.')) deleteMutation.mutate();
+        }}
+        onAddToScript={() => toast.info('Open Practice Scripts to add this play.')}
+        onAddToGamePlan={() => toast.info('Open Game Planning to add this play.')}
+      />
 
-      {/* ── Sticky header ── */}
-      <header className="bg-card border-b border-border shrink-0 z-10">
-        <div className="flex items-center gap-2 px-4 sm:px-6 h-14">
-          {/* Back */}
-          <Button variant="ghost" size="icon" onClick={() => navigate('/play-library')} className="h-8 w-8 shrink-0">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-
-          {/* Title area */}
-          <div className="flex items-center gap-2 flex-1 min-w-0 mr-2">
-            <h1 className="font-display font-bold text-base truncate">
-              {play.name || (editId ? 'Edit Play' : 'New Play')}
-            </h1>
-            {play.side && (
-              <Badge className={cn("text-[10px] capitalize shrink-0 hidden sm:flex", SIDE_BADGE[play.side])}>
-                {play.side.replace(/_/g, ' ')}
-              </Badge>
-            )}
-            {play.formation && (
-              <span className="text-xs text-muted-foreground truncate hidden md:block">{play.formation}</span>
-            )}
-            {isDirty && (
-              <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 shrink-0">
-                <AlertCircle className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Unsaved</span>
-              </span>
-            )}
-          </div>
-
-          {/* Header actions */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {/* Favorite */}
+      {/* Tabs bar */}
+      <div className="border-b border-border bg-background shrink-0 overflow-x-auto">
+        <div className="flex px-6 gap-0">
+          {TABS.map(tab => (
             <button
-              onClick={() => setPlay(prev => ({ ...prev, is_favorite: !prev.is_favorite }))}
-              className={cn("h-8 w-8 flex items-center justify-center rounded-lg transition-colors",
-                play.is_favorite ? "text-amber-500" : "text-muted-foreground hover:text-amber-400 hover:bg-secondary"
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "px-4 py-3.5 text-sm font-medium border-b-2 transition-all whitespace-nowrap",
+                activeTab === tab.id
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
               )}
             >
-              <Star className={cn("h-4 w-4", play.is_favorite && "fill-current")} />
-            </button>
-
-            {/* Mobile action overflow */}
-            <div className="flex sm:hidden">
-              <Button
-                size="sm"
-                onClick={() => saveMutation.mutate(play)}
-                disabled={!canSave || saveMutation.isPending}
-                className="gap-1.5 rounded-xl h-8"
-              >
-                {saveMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                Save
-              </Button>
-            </div>
-
-            {/* Desktop actions */}
-            <div className="hidden sm:flex items-center gap-1.5">
-              {editId && (
-                <>
-                  <Button variant="outline" size="sm" onClick={handleDuplicate} className="gap-1.5 rounded-xl h-8 text-xs">
-                    <Copy className="h-3.5 w-3.5" /> Dupe
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleSaveAsVersion} className="gap-1.5 rounded-xl h-8 text-xs">
-                    <Save className="h-3.5 w-3.5" /> + Version
-                  </Button>
-                  <Button
-                    variant="outline" size="sm"
-                    onClick={handleToggleActive}
-                    className={cn("gap-1.5 rounded-xl h-8 text-xs", play.is_active === false && "text-muted-foreground")}
-                  >
-                    {play.is_active !== false
-                      ? <><PowerOff className="h-3.5 w-3.5" /> Deactivate</>
-                      : <><Power className="h-3.5 w-3.5 text-emerald-500" /> Activate</>
-                    }
-                  </Button>
-                </>
+              {tab.label}
+              {tab.id === 'assignments' && assignments.length > 0 && (
+                <span className="ml-1.5 text-[10px] bg-secondary text-muted-foreground rounded-full px-1.5 py-0.5 font-bold">
+                  {assignments.length}
+                </span>
               )}
-              <Button
-                size="sm"
-                onClick={() => saveMutation.mutate(play)}
-                disabled={!canSave || saveMutation.isPending}
-                className="gap-1.5 rounded-xl h-8"
-              >
-                {saveMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                Save Play
-              </Button>
-            </div>
+              {tab.id === 'tags' && allTagCount > 0 && (
+                <span className="ml-1.5 text-[10px] bg-secondary text-muted-foreground rounded-full px-1.5 py-0.5 font-bold">
+                  {allTagCount}
+                </span>
+              )}
+              {tab.id === 'diagram' && diagrams.length > 0 && (
+                <span className="ml-1.5 text-[10px] bg-emerald-500/10 text-emerald-600 rounded-full px-1.5 py-0.5 font-bold">
+                  {diagrams.length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 overflow-hidden flex">
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6">
+            {activeTab === 'overview' && (
+              <OverviewTab
+                play={play}
+                onChange={setPlay}
+                assignmentCount={assignments.length}
+                tagCount={allTagCount}
+                hasDiagram={diagrams.length > 0}
+              />
+            )}
+            {activeTab === 'assignments' && (
+              <AssignmentsTab playId={editId} />
+            )}
+            {activeTab === 'tags' && (
+              <TagsTab play={play} onChange={setPlay} />
+            )}
+            {activeTab === 'diagram' && (
+              <DiagramTab playId={editId} play={play} onChange={setPlay} />
+            )}
+            {activeTab === 'notes' && (
+              <NotesTab play={play} onChange={setPlay} />
+            )}
+            {activeTab === 'history' && (
+              <HistoryTab play={play} onDuplicate={() => duplicateMutation.mutate()} />
+            )}
           </div>
         </div>
 
-        {/* ── Tab bar ── */}
-        <div className="flex overflow-x-auto border-t border-border scrollbar-hide">
-          {TABS.map(tab => {
-            const count = tab.id === 'assignments' ? assignments.length
-              : tab.id === 'tags' ? allTags.length
-              : null;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "flex items-center gap-1.5 px-4 sm:px-5 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-all",
-                  activeTab === tab.id
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-                )}
-              >
-                {tab.label}
-                {count !== null && count > 0 && (
-                  <span className={cn(
-                    "text-[10px] font-bold px-1.5 py-0.5 rounded-full",
-                    activeTab === tab.id ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"
-                  )}>
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </header>
-
-      {/* ── Tab content ── */}
-      <main className="flex-1 overflow-y-auto p-5 sm:p-6">
-        {activeTab === 'overview' && (
-          <OverviewTab
+        {/* Right summary panel — desktop only */}
+        <div className="hidden 2xl:block w-72 shrink-0 border-l border-border overflow-y-auto p-5">
+          <PlaySummaryPanel
             play={play}
-            onChange={setPlay}
-            assignmentCount={assignments.length}
-            tagCount={allTags.length}
-            hasDiagram={hasDiagram}
+            isSaving={saveMutation.isPending}
+            onSave={handleSave}
+            onDuplicate={() => duplicateMutation.mutate()}
+            onAddToScript={() => toast.info('Open Practice Scripts to add this play.')}
+            onAddToGamePlan={() => toast.info('Open Game Planning to add this play.')}
           />
-        )}
-        {activeTab === 'assignments' && (
-          <AssignmentsTab playId={editId} />
-        )}
-        {activeTab === 'tags' && (
-          <TagsTab play={play} onChange={setPlay} />
-        )}
-        {activeTab === 'diagram' && (
-          <DiagramTab play={play} onChange={setPlay} />
-        )}
-        {activeTab === 'notes' && (
-          <NotesTab play={play} onChange={setPlay} />
-        )}
-        {activeTab === 'history' && (
-          <HistoryTab play={play} onSaveAsNewVersion={handleSaveAsVersion} onDuplicate={handleDuplicate} />
-        )}
-
-        {/* Delete zone at bottom of any tab for existing plays */}
-        {editId && activeTab === 'history' && (
-          <div className="mt-8 pt-6 border-t border-border max-w-2xl">
-            <p className="text-xs font-bold uppercase tracking-widest text-destructive mb-3">Danger Zone</p>
-            <Button variant="outline" size="sm" onClick={handleDelete}
-              className="gap-2 rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 h-8 text-xs">
-              <Trash2 className="h-3.5 w-3.5" /> Delete This Play
-            </Button>
-          </div>
-        )}
-      </main>
+        </div>
+      </div>
     </div>
   );
 }

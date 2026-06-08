@@ -45,7 +45,7 @@ export default function PlayTable({ plays, sort, onSort, selected, onSelect, onS
     <div className="overflow-x-auto rounded-xl border border-border">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-secondary/40 border-b border-border sticky top-0 z-10">
+          <tr className="bg-secondary/60 border-b border-border">
             <th className="w-10 px-3 py-3">
               <button onClick={onSelectAll} className="text-muted-foreground hover:text-foreground transition-colors">
                 {allSelected ? (
@@ -86,8 +86,8 @@ export default function PlayTable({ plays, sort, onSort, selected, onSelect, onS
                 key={play.id}
                 onClick={() => onOpen(play)}
                 className={cn(
-                  "group transition-colors cursor-pointer border-b border-border last:border-0",
-                  isSelected ? "bg-primary/5" : "hover:bg-secondary/30"
+                  "group transition-colors cursor-pointer",
+                  isSelected ? "bg-primary/5 border-l-2 border-l-primary" : "hover:bg-secondary/30"
                 )}
               >
                 {/* Checkbox */}
