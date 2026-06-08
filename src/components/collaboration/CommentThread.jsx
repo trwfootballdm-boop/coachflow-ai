@@ -21,6 +21,7 @@ import {
 import { cn } from '@/lib/utils';
 
 export default function CommentThread({ parentType, parentId, teamId }) {
+  const queryClient = useQueryClient();
   const [newComment, setNewComment] = useState('');
   const [commentType, setCommentType] = useState('general');
   const [replyTo, setReplyTo] = useState(null);
