@@ -22,7 +22,8 @@ const TOOL_HINTS = {
 };
 
 export default function DesignerStatusBar({
-  activeTool, playerCount, pathCount, selectedType, zoom, drawingPointCount
+  activeTool, playerCount, pathCount, selectedType, zoom, drawingPointCount,
+  validation, concepts, reaction, timing, adjustments, install
 }) {
   const hint = TOOL_HINTS[activeTool] || 'Select a tool to begin';
 
@@ -45,6 +46,16 @@ export default function DesignerStatusBar({
           selectedType === 'player' ? "bg-blue-500/20 text-blue-400" : "bg-amber-500/20 text-amber-400"
         )}>
           {selectedType === 'player' ? '● Player' : '⟿ Path'} selected
+        </span>
+      )}
+
+      {/* Analysis pipeline status */}
+      {install && (
+        <span className={cn(
+          "px-1.5 py-0.5 rounded text-[9px] font-bold",
+          install.readyToInstall ? "bg-green-500/20 text-green-400" : "bg-orange-500/20 text-orange-400"
+        )}>
+          {install.readyToInstall ? '✓ Ready to install' : '⚠ Needs work'}
         </span>
       )}
 

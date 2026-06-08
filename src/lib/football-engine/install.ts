@@ -1,6 +1,6 @@
 import type { PlayDiagram } from './types';
 import type { ConceptAnalysisResult } from './concepts';
-import type { DefensiveScenario } from './reactions';
+import type { DefensiveScenario } from './adjustments';
 import type { TimingAnalysisResult } from './timing';
 import type { AdjustmentAnalysisResult } from './adjustments';
 

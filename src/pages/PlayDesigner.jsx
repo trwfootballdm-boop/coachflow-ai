@@ -408,6 +408,12 @@ export default function PlayDesigner() {
         selectedType={selectedType}
         zoom={1}
         drawingPointCount={drawingPts}
+        validation={validation}
+        concepts={concepts}
+        reaction={reaction}
+        timing={timing}
+        adjustments={adjustments}
+        install={install}
       />
     </div>
   );
