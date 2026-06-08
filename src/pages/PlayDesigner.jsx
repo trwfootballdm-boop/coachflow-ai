@@ -59,15 +59,31 @@ function useHistory(initial) {
   const push = useCallback((next) => {
     setStack(prev => {
       const trimmed = prev.slice(0, cursor + 1);
-      return [...trimmed, next].slice(-40); // keep 40 states
+      return [...trimmed, next].slice(-50);
     });
-    setCursor(prev => Math.min(prev + 1, 39));
+    setCursor(prev => Math.min(prev + 1, 49));
   }, [cursor]);
 
-  const undo = useCallback(() => setCursor(c => Math.max(0, c - 1)), []);
-  const redo = useCallback(() => setStack(s => { setCursor(c => Math.min(s.length - 1, c + 1)); return s; }), []);
+  const undo = useCallback(() => {
+    setCursor(c => {
+      const newCursor = Math.max(0, c - 1);
+      return newCursor;
+    });
+  }, []);
 
-  return { current, push, undo, redo, canUndo: cursor > 0, canRedo: cursor < stack.length - 1 };
+  const redo = useCallback(() => {
+    setCursor(c => {
+      const newCursor = Math.min(stack.length - 1, c + 1);
+      return newCursor;
+    });
+  }, [stack.length]);
+
+  const set = useCallback((next) => {
+    setStack(next);
+    setCursor(next.length - 1);
+  }, []);
+
+  return { current, push, undo, redo, set, canUndo: cursor > 0, canRedo: cursor < stack.length - 1 };
 }
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
@@ -157,9 +173,9 @@ export default function PlayDesigner() {
 
   const movePlayer = useCallback((id, x, y) => {
     const updated = diag.players.map(p => p.token_id === id ? { ...p, x, y } : p);
-    // live move without history push (push on mouse-up via onSelectPlayer settle)
-    diagram.push({ ...diag, players: updated });
-  }, [diag, diagram]);
+    // Live move during drag - don't create history entry yet
+    // We'll push to history when the drag completes
+  }, [diag]);
 
   const addPlayer = useCallback((coords) => {
     const newId = `player_${Date.now()}`;
