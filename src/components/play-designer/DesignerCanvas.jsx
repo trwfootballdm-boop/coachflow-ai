@@ -199,18 +199,6 @@ export default function DesignerCanvas({
     return () => window.removeEventListener('keydown', onKey);
   }, [drawing, onDrawingChange]);
 
-  useEffect(() => {
-    onDrawingChange?.(drawing?.points.length || 0);
-  }, [drawing, onDrawingChange]);
-
-  // Clear drawing when switching away from draw tools
-  useEffect(() => {
-    if (drawing && !isDrawTool) {
-      setDrawing(null);
-      onDrawingChange?.(0);
-    }
-  }, [activeTool, isDrawTool, drawing, onDrawingChange]);
-
   const DRAW_TOOL_MAP = {
     draw_route: 'pass_route',
     draw_run: 'run_path',
@@ -225,6 +213,18 @@ export default function DesignerCanvas({
   };
 
   const isDrawTool = activeTool && DRAW_TOOL_MAP[activeTool];
+
+  useEffect(() => {
+    onDrawingChange?.(drawing?.points.length || 0);
+  }, [drawing, onDrawingChange]);
+
+  // Clear drawing when switching away from draw tools
+  useEffect(() => {
+    if (drawing && !isDrawTool) {
+      setDrawing(null);
+      onDrawingChange?.(0);
+    }
+  }, [activeTool, isDrawTool, drawing, onDrawingChange]);
   const toolMeta = getToolMeta(activeTool, isDrawTool);
   const ToolIcon = toolMeta.icon;
 
