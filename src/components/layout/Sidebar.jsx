@@ -14,7 +14,7 @@ import {
   Users,
   Settings,
   BookOpen,
-  Package,
+  Brain,
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
@@ -25,15 +25,15 @@ const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
   { label: 'Play Designer', icon: PenTool, path: '/play-designer' },
   { label: 'Play Library', icon: Library, path: '/play-library' },
-  { label: 'Playbook Library', icon: Package, path: '/playbook-library' },
   { label: 'Game Planning', icon: ClipboardList, path: '/game-planning' },
+  { label: 'Weekly Install', icon: Brain, path: '/weekly-install' },
   { label: 'Practice Scripts', icon: FileText, path: '/practice-scripts' },
   { label: 'Scout Cards', icon: Shield, path: '/scout-cards' },
   { label: 'Wristband', icon: Rows3, path: '/wristband' },
-  { label: 'Install Sheets', icon: Calendar, path: '/install-sheets' },
+  { label: 'Starter Library', icon: BookOpen, path: '/install-sheets' },
   { label: 'Scouting', icon: Search, path: '/scouting' },
   { label: 'Roster', icon: Users, path: '/roster' },
-  { label: 'Terminology', icon: BookOpen, path: '/terminology' },
+  { label: 'Terminology', icon: Calendar, path: '/terminology' },
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];
 

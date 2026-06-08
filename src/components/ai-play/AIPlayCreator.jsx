@@ -12,14 +12,14 @@ import { Button } from '@/components/ui/button';
 import AIPlayReview from './AIPlayReview';
 
 const SAMPLE_PROMPTS = [
-  'I Right power to the right with FB lead block',
-  'Shotgun Trips Right flood route combo with backside hitch',
-  'Double Wing wedge left with pulling guards',
-  '6-2 edge blitz left with corners in contain',
-  'Goal line power pass right — fake to FB, QB bootleg',
-  'Kickoff return middle wedge',
-  'I Right sweep left with reverse pivot fake',
-  '5-3 outside blitz right with free safety alley fit',
+  'I Right power right — FB lead block through C-gap, pull RG',
+  'Shotgun Trips Right flood — Z go, Y corner, H flat',
+  'Double Wing trap left — pulling LG and RT, FB kickout',
+  '6-2 edge blitz left — OLB rush, CB contain',
+  'Goal line play action — fake power, QB bootleg right',
+  'Spread inside zone left — read backside DE',
+  'Wing-T sweep right — reverse pivot fake, pull both guards',
+  '5-3 Cover 2 — DE contain, LBs fill A/B gaps',
 ];
 
 const HELPER_OPTIONS = {
@@ -88,60 +88,66 @@ export default function AIPlayCreator({ onClose, initialPrompt = '' }) {
     setStatus('saving');
     const { play_meta, diagram, assignments } = editedResult;
 
-    const payload = {
-      team_id: activeTeamId,
-      name: play_meta.name,
-      play_name: play_meta.name,
-      short_name: play_meta.short_name,
-      side: play_meta.side || 'offense',
-      run_pass: play_meta.run_pass,
-      play_type: play_meta.play_type,
-      play_family: play_meta.play_family,
-      formation: play_meta.formation,
-      concept: play_meta.concept,
-      direction: play_meta.direction,
-      strength: play_meta.strength,
-      personnel: play_meta.personnel,
-      risk_level: play_meta.risk_level || 'medium',
-      age_level_difficulty: play_meta.age_level_difficulty || 'youth',
-      down_distance_tags: play_meta.down_distance_tags || [],
-      field_zone_tags: play_meta.field_zone_tags || [],
-      tags: play_meta.tags || [],
-      coaching_points: play_meta.coaching_points,
-      notes: play_meta.notes,
-      is_active: saveMode !== 'draft' ? true : false,
-      version: 1,
-      diagram_data: {
-        players: diagram?.players || [],
-        paths: diagram?.paths || [],
-        annotations: diagram?.annotations || [],
-      },
-    };
+    try {
+      const payload = {
+        team_id: activeTeamId,
+        name: play_meta.name,
+        play_name: play_meta.name,
+        short_name: play_meta.short_name,
+        side: play_meta.side || 'offense',
+        run_pass: play_meta.run_pass,
+        play_type: play_meta.play_type,
+        play_family: play_meta.play_family,
+        formation: play_meta.formation,
+        concept: play_meta.concept,
+        direction: play_meta.direction,
+        strength: play_meta.strength,
+        personnel: play_meta.personnel,
+        risk_level: play_meta.risk_level || 'medium',
+        age_level_difficulty: play_meta.age_level_difficulty || 'youth',
+        down_distance_tags: play_meta.down_distance_tags || [],
+        field_zone_tags: play_meta.field_zone_tags || [],
+        tags: play_meta.tags || [],
+        coaching_points: play_meta.coaching_points,
+        notes: play_meta.notes,
+        is_active: saveMode !== 'draft' ? true : false,
+        version: 1,
+        diagram_data: {
+          players: diagram?.players || [],
+          paths: diagram?.paths || [],
+          annotations: diagram?.annotations || [],
+        },
+      };
 
-    const saved = await base44.entities.Play.create(payload);
+      const saved = await base44.entities.Play.create(payload);
 
-    // Save assignments as PlayAssignment records
-    if (assignments?.length && saved?.id) {
-      const assignRecords = assignments.map((a, i) => ({
-        play_id: saved.id,
-        position_code: a.position_code,
-        assignment_type: a.assignment_type,
-        assignment_text: a.assignment_text,
-        aiming_point: a.aiming_point || '',
-        read_key: a.read_key || '',
-        order_index: i,
-      }));
-      await Promise.all(assignRecords.map(r => base44.entities.PlayAssignment.create(r)));
-    }
+      // Save assignments as PlayAssignment records
+      if (assignments?.length && saved?.id) {
+        const assignRecords = assignments.map((a, i) => ({
+          play_id: saved.id,
+          position_code: a.position_code,
+          assignment_type: a.assignment_type,
+          assignment_text: a.assignment_text,
+          aiming_point: a.aiming_point || '',
+          read_key: a.read_key || '',
+          order_index: i,
+        }));
+        await Promise.all(assignRecords.map(r => base44.entities.PlayAssignment.create(r)));
+      }
 
-    setStatus('idle');
-    toast.success(saveMode === 'designer' ? 'Play created — opening in Designer…' : 'Play saved to library');
+      setStatus('idle');
+      toast.success(saveMode === 'designer' ? 'Play created — opening in Designer…' : 'Play saved to library');
 
-    if (saveMode === 'designer' && saved?.id) {
-      onClose?.();
-      navigate(`/play-designer?id=${saved.id}`);
-    } else {
-      onClose?.();
+      if (saveMode === 'designer' && saved?.id) {
+        onClose?.();
+        navigate(`/play-designer?id=${saved.id}`);
+      } else if (saveMode === 'draft') {
+        onClose?.();
+        navigate('/play-library');
+      }
+    } catch (err) {
+      setStatus('idle');
+      toast.error('Failed to save play. Please try again.');
     }
   };
 
@@ -197,10 +203,13 @@ export default function AIPlayCreator({ onClose, initialPrompt = '' }) {
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleGenerate(); }}
-            placeholder="e.g. I Right power to the strong side with FB lead and QB reverse pivot fake"
+            placeholder="e.g. I Right power right — FB lead through C-gap, pull RG, QB reverse pivot fake"
             className="w-full h-28 bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-colors"
           />
-          <p className="text-[10px] text-gray-600 mt-1">Tip: ⌘+Enter to generate</p>
+          <div className="flex items-center gap-2 mt-1.5">
+            <p className="text-[10px] text-gray-600">Tip: Include formation, concept, direction, and key blocks/routes</p>
+            <kbd className="text-[9px] bg-gray-800 border border-gray-700 rounded px-1.5 py-0.5 text-gray-500">⌘+Enter</kbd>
+          </div>
         </div>
 
         {/* Sample prompts */}
@@ -227,13 +236,14 @@ export default function AIPlayCreator({ onClose, initialPrompt = '' }) {
           >
             <span className="flex items-center gap-1.5">
               <Info className="h-3.5 w-3.5" />
-              Optional Helper Fields
+              Refine with Helper Fields
             </span>
             {showHelpers ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
           </button>
 
           {showHelpers && (
             <div className="px-3.5 pb-3.5 grid grid-cols-2 gap-2.5 border-t border-gray-800">
+              <p className="text-[10px] text-gray-500 col-span-2 -mt-1">Use these to guide the AI for more accurate results</p>
               {/* Side of ball */}
               <div>
                 <label className="text-[10px] text-gray-500 block mb-1">Side of Ball</label>
@@ -368,9 +378,9 @@ export default function AIPlayCreator({ onClose, initialPrompt = '' }) {
           onClick={handleGenerate}
         >
           {status === 'generating' ? (
-            <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating Draft…</>
+            <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating…</>
           ) : (
-            <><Sparkles className="h-3.5 w-3.5" /> Generate Play</>
+            <><Sparkles className="h-3.5 w-3.5" /> Generate & Review</>
           )}
         </Button>
       </div>

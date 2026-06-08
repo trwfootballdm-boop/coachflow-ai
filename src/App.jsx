@@ -30,7 +30,7 @@ import Scouting from '@/pages/Scouting';
 import Roster from '@/pages/Roster';
 import Terminology from '@/pages/Terminology';
 import Settings from '@/pages/Settings';
-import PlaybookLibrary from '@/pages/PlaybookLibrary';
+import WeeklyInstallPlanner from '@/pages/WeeklyInstallPlanner';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -78,8 +78,8 @@ const AuthenticatedApp = () => {
             <Route path="/scouting" element={<Scouting />} />
             <Route path="/roster" element={<Roster />} />
             <Route path="/terminology" element={<Terminology />} />
-            <Route path="/playbook-library" element={<PlaybookLibrary />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/weekly-install" element={<WeeklyInstallPlanner />} />
           </Route>
         </Route>
 

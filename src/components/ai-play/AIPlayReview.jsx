@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import {
   RotateCcw, Trash2, Save, ExternalLink, CheckCircle,
-  AlertCircle, ChevronDown, ChevronUp, Loader2, Edit3
+  AlertCircle, ChevronDown, ChevronUp, Loader2, Edit3, Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -90,10 +90,44 @@ function DiagramMiniPreview({ diagram }) {
 // ── Assumption pill ───────────────────────────────────────────────────────────
 function AssumptionBadge({ text }) {
   return (
-    <div className="flex items-start gap-1.5 text-[11px] text-amber-300/80">
+    <div className="flex items-start gap-1.5 text-[11px] text-amber-300/80 bg-amber-950/20 px-2 py-1.5 rounded-lg border border-amber-800/30">
       <AlertCircle className="h-3 w-3 mt-0.5 shrink-0 text-amber-400" />
       <span>{text}</span>
     </div>
+  );
+}
+
+// ── Editable field ────────────────────────────────────────────────────────────
+function EditableField({ label, value, onChange, multiline = false }) {
+  const [editing, setEditing] = useState(false);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (editing && inputRef.current) inputRef.current.focus();
+  }, [editing]);
+
+  if (editing) {
+    const Component = multiline ? 'textarea' : 'input';
+    return (
+      <Component
+        ref={inputRef}
+        value={value}
+        onChange={e => { onChange(e.target.value); }}
+        onBlur={() => setEditing(false)}
+        onKeyDown={e => e.key === 'Enter' && !multiline && setEditing(false)}
+        className="w-full bg-gray-800 border border-emerald-500/50 rounded-lg px-3 py-2 text-white text-sm focus:outline-none"
+        rows={multiline ? 3 : undefined}
+      />
+    );
+  }
+
+  return (
+    <button onClick={() => setEditing(true)} className="text-left group">
+      <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">{label}</p>
+      <p className="text-[12px] text-gray-200 group-hover:text-emerald-300 transition-colors">
+        {value || <span className="text-gray-600 italic">Click to add</span>}
+      </p>
+    </button>
   );
 }
 
@@ -205,15 +239,15 @@ export default function AIPlayReview({ generated, isSaving, onSave, onRegenerate
           ))}
         </div>
 
-        {/* Coaching points */}
-        {meta.coaching_points && (
-          <div className="px-5 pb-3">
-            <div className="bg-gray-800/40 border border-gray-700/50 rounded-xl px-3.5 py-3">
-              <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Coaching Points</p>
-              <p className="text-[12px] text-gray-300 leading-relaxed">{meta.coaching_points}</p>
-            </div>
-          </div>
-        )}
+        {/* Coaching points (editable) */}
+        <div className="px-5 pb-3">
+          <EditableField
+            label="Coaching Points"
+            value={meta.coaching_points}
+            onChange={v => setMeta({ coaching_points: v })}
+            multiline
+          />
+        </div>
 
         {/* Stats bar */}
         <div className="px-5 pb-3">
@@ -236,35 +270,55 @@ export default function AIPlayReview({ generated, isSaving, onSave, onRegenerate
         {/* Assumptions */}
         {assumptions.length > 0 && (
           <div className="px-5 pb-3">
-            <div className="bg-amber-950/30 border border-amber-800/40 rounded-xl px-3.5 py-3 space-y-1.5">
-              <p className="text-[10px] text-amber-500 uppercase tracking-wider font-bold mb-2">Assumptions Made</p>
-              {assumptions.map((a, i) => <AssumptionBadge key={i} text={a} />)}
+            <div className="bg-amber-950/30 border border-amber-800/40 rounded-xl px-3.5 py-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-amber-500 uppercase tracking-wider font-bold">
+                  Assumptions Made ({assumptions.length})
+                </p>
+                <span className="text-[10px] text-amber-400/70">Review before saving</span>
+              </div>
+              <div className="space-y-1.5">
+                {assumptions.map((a, i) => <AssumptionBadge key={i} text={a} />)}
+              </div>
             </div>
           </div>
         )}
 
-        {/* Assignments (collapsible) */}
+        {/* Assignments (collapsible, editable) */}
         {assignments.length > 0 && (
           <div className="px-5 pb-3">
             <button
               onClick={() => setShowAssignments(v => !v)}
               className="w-full flex items-center justify-between py-2 text-[11px] font-bold text-gray-400 hover:text-gray-200 transition-colors"
             >
-              <span>Assignments ({assignments.length})</span>
+              <span>Player Assignments ({assignments.length})</span>
               {showAssignments ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </button>
             {showAssignments && (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {assignments.map((a, i) => (
-                  <div key={i} className="bg-gray-800/40 rounded-lg px-3 py-2">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="text-[11px] font-bold text-gray-300 font-mono">{a.position_code}</span>
-                      <span className="text-[10px] text-gray-600 capitalize">{a.assignment_type}</span>
+                  <div key={i} className="bg-gray-800/60 border border-gray-700/50 rounded-lg px-3 py-2.5">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[12px] font-bold text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded">{a.position_code}</span>
+                        <span className="text-[10px] text-gray-500 capitalize">{String(a.assignment_type).replace(/_/g, ' ')}</span>
+                      </div>
                     </div>
-                    <p className="text-[11px] text-gray-400">{a.assignment_text}</p>
-                    {a.aiming_point && (
-                      <p className="text-[10px] text-gray-600 mt-0.5">Aim: {a.aiming_point}</p>
-                    )}
+                    <p className="text-[11px] text-gray-300 leading-relaxed mb-1">{a.assignment_text}</p>
+                    <div className="flex items-center gap-3 text-[10px] text-gray-500">
+                      {a.aiming_point && (
+                        <span className="flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                          Aim: {a.aiming_point}
+                        </span>
+                      )}
+                      {a.read_key && (
+                        <span className="flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                          Read: {a.read_key}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -272,9 +326,9 @@ export default function AIPlayReview({ generated, isSaving, onSave, onRegenerate
           </div>
         )}
 
-        {/* Tags (collapsible) */}
+        {/* Tags (collapsible, organized by category) */}
         {tags.length > 0 && (
-          <div className="px-5 pb-4">
+          <div className="px-5 pb-3">
             <button
               onClick={() => setShowTags(v => !v)}
               className="w-full flex items-center justify-between py-2 text-[11px] font-bold text-gray-400 hover:text-gray-200 transition-colors"
@@ -284,60 +338,88 @@ export default function AIPlayReview({ generated, isSaving, onSave, onRegenerate
             </button>
             {showTags && (
               <div className="flex flex-wrap gap-1.5">
-                {tags.map(t => (
-                  <span key={t} className="text-[10px] bg-gray-800 border border-gray-700 text-gray-400 px-2 py-0.5 rounded-full">
-                    {t}
-                  </span>
-                ))}
+                {tags.map((t, i) => {
+                  // Color-code by tag type
+                  const isConcept = ['power', 'zone', 'iso', 'trap', 'flood', 'mesh', 'slant', 'blitz'].some(k => t.toLowerCase().includes(k));
+                  const isSituation = ['red_zone', 'goal_line', 'short', 'medium', 'long'].some(k => t.toLowerCase().includes(k));
+                  const isFormation = ['i_form', 'shotgun', 'spread', 'wing', 'goal_line'].some(k => t.toLowerCase().includes(k));
+                  
+                  const colorClass = isConcept ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
+                                    isSituation ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                                    isFormation ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' :
+                                    'bg-gray-800 text-gray-400 border-gray-700';
+                  
+                  return (
+                    <span key={i} className={`text-[10px] px-2 py-1 rounded-full border ${colorClass}`}>
+                      {String(t).replace(/_/g, ' ')}
+                    </span>
+                  );
+                })}
               </div>
             )}
           </div>
         )}
+
+        {/* Play notes (editable) */}
+        <div className="px-5 pb-4">
+          <EditableField
+            label="Coach Notes"
+            value={meta.notes}
+            onChange={v => setMeta({ notes: v })}
+            multiline
+          />
+        </div>
       </div>
 
       {/* Footer actions */}
       <div className="px-5 py-4 border-t border-gray-800 space-y-2 shrink-0">
         {/* Primary CTA */}
         <Button
-          className="w-full h-9 bg-emerald-600 hover:bg-emerald-500 text-white font-bold gap-2 rounded-xl"
+          className="w-full h-10 bg-emerald-600 hover:bg-emerald-500 text-white font-bold gap-2 rounded-xl text-sm"
           disabled={isSaving}
           onClick={() => onSave(edited, 'designer')}
         >
           {isSaving ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <ExternalLink className="h-3.5 w-3.5" />
+            <ExternalLink className="h-4 w-4" />
           )}
-          Open in Play Designer
+          {isSaving ? 'Saving…' : 'Save & Open in Designer'}
         </Button>
 
         {/* Secondary row */}
         <div className="flex gap-2">
           <Button
             variant="outline"
-            className="flex-1 h-8 text-[12px] border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white rounded-xl gap-1.5"
+            className="flex-1 h-9 text-[12px] border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white rounded-xl gap-1.5"
             disabled={isSaving}
             onClick={() => onSave(edited, 'draft')}
           >
-            <Save className="h-3 w-3" /> Save Draft
+            <Save className="h-3.5 w-3.5" /> Save to Library
           </Button>
           <Button
             variant="ghost"
-            className="flex-1 h-8 text-[12px] text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl gap-1.5"
+            className="flex-1 h-9 text-[12px] text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl gap-1.5"
             disabled={isSaving}
             onClick={onRegenerate}
           >
-            <RotateCcw className="h-3 w-3" /> Regenerate
+            <RotateCcw className="h-3.5 w-3.5" /> Regenerate
           </Button>
           <Button
             variant="ghost"
-            className="h-8 w-8 text-gray-600 hover:text-red-400 hover:bg-gray-800 rounded-xl p-0"
+            className="h-9 w-9 text-gray-600 hover:text-red-400 hover:bg-gray-800 rounded-xl p-0"
             disabled={isSaving}
             onClick={onDiscard}
+            title="Discard"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
+
+        {/* Helper text */}
+        <p className="text-[10px] text-gray-500 text-center -mt-1">
+          You can edit the play further in Designer after saving
+        </p>
       </div>
     </div>
   );
