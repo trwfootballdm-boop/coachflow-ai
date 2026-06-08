@@ -5,7 +5,7 @@ import { useTeam } from '@/components/TeamContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Library, Loader2, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { Plus, Library, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -197,159 +197,162 @@ export default function PlayLibrary() {
     ...filters.downDistance, ...filters.fieldZone, ...filters.fronts, ...filters.coverages, ...filters.situations,
   ].filter(Boolean).length;
 
+  const sideDisplayName = side.replace('_', ' ');
+
   return (
-    <div className={cn("flex gap-0 h-[calc(100vh-64px)] -m-6 overflow-hidden", detailPlay && "")}>
+    <div className="flex h-[calc(100vh-64px)] -m-6 overflow-hidden">
 
-      {/* Main content */}
+      {/* ── Main column ── */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-5 space-y-4">
 
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-display font-bold">Play Library</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                {plays.length} total plays · {filteredSorted.length} matching
-                {activeFilterCount > 0 && (
-                  <Badge variant="secondary" className="ml-2 text-[10px]">{activeFilterCount} filters active</Badge>
-                )}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="gap-1.5 rounded-xl text-xs hidden sm:flex">
-                <Download className="h-3.5 w-3.5" /> Export
-              </Button>
-              <Button onClick={() => navigate('/play-designer')} size="sm" className="gap-1.5 rounded-xl">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-display font-bold tracking-tight">Play Library</h1>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {filteredSorted.length} of {plays.length} plays
+                  {activeFilterCount > 0 && (
+                    <Badge variant="secondary" className="ml-2 text-[10px] align-middle">{activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''}</Badge>
+                  )}
+                </p>
+              </div>
+              <Button onClick={() => navigate('/play-designer')} size="sm" className="gap-1.5 rounded-xl self-start sm:self-auto">
                 <Plus className="h-4 w-4" /> New Play
               </Button>
             </div>
-          </div>
 
-          {/* Side-of-ball tabs */}
-          <div className="flex items-center gap-1 bg-secondary/60 p-1 rounded-xl w-fit">
-            {SIDE_TABS.map(tab => (
-              <button
-                key={tab.value}
-                onClick={() => handleSideChange(tab.value)}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
-                  side === tab.value
-                    ? "bg-card shadow-sm text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {tab.label}
-                <span className={cn(
-                  "text-[10px] font-bold px-1.5 py-0.5 rounded-full",
-                  side === tab.value ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"
-                )}>
-                  {sideCounts[tab.value]}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* Saved views */}
-          <SavedViews activeView={null} onApply={handleApplySavedView} />
-
-          {/* Filters */}
-          <PlayLibraryFilters
-            filters={filters}
-            onChange={handleFilterChange}
-            plays={plays.filter(p => p.side === side)}
-            side={side}
-          />
-
-          {/* Content area */}
-          {isLoading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : filteredSorted.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="h-16 w-16 rounded-2xl bg-secondary flex items-center justify-center mb-4">
-                <Library className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-display font-semibold">
-                {plays.filter(p => p.side === side).length === 0 ? `No ${side.replace('_', ' ')} plays yet` : 'No plays match your filters'}
-              </h3>
-              <p className="text-muted-foreground text-sm mt-1 max-w-sm">
-                {plays.filter(p => p.side === side).length === 0
-                  ? 'Build your playbook by creating plays organized by formation, concept, and situation.'
-                  : 'Try adjusting or clearing your filters to see more plays.'}
-              </p>
-              <div className="flex items-center gap-3 mt-4">
-                {activeFilterCount > 0 && (
-                  <Button variant="outline" size="sm" className="rounded-xl" onClick={() => handleFilterChange(DEFAULT_FILTERS)}>
-                    Clear All Filters
-                  </Button>
-                )}
-                <Button size="sm" className="rounded-xl gap-1.5" onClick={() => navigate('/play-designer')}>
-                  <Plus className="h-4 w-4" /> New Play
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <PlayTable
-                plays={pagePlays}
-                sort={sort}
-                onSort={handleSort}
-                selected={selected}
-                onSelect={handleSelect}
-                onSelectAll={handleSelectAll}
-                onOpen={(play) => setDetailPlay(play)}
-                onEdit={(play) => navigate(`/play-designer?id=${play.id}`)}
-                onDuplicate={(play) => duplicateMutation.mutate(play)}
-                onToggleFav={(play) => toggleFavMutation.mutate(play)}
-                onToggleActive={(play) => toggleActiveMutation.mutate(play)}
-                onAddToScript={handleAddToScript}
-                onAddToGamePlan={handleAddToGamePlan}
-              />
-
-              {/* Pagination */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2 pb-8">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>Show</span>
-                  <div className="flex items-center gap-1">
-                    {PAGE_SIZES.map(size => (
-                      <button
-                        key={size}
-                        onClick={() => { setPageSize(size); setPage(1); }}
-                        className={cn(
-                          "h-7 w-9 text-xs rounded-md font-medium transition-colors",
-                          pageSize === size ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-secondary/80 text-muted-foreground"
-                        )}
-                      >
-                        {size}
-                      </button>
-                    ))}
-                  </div>
-                  <span>· {filteredSorted.length} plays</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    Page {page} of {totalPages || 1}
+            {/* Side-of-ball tabs */}
+            <div className="flex items-center gap-1 bg-secondary/70 p-1 rounded-xl w-fit">
+              {SIDE_TABS.map(tab => (
+                <button
+                  key={tab.value}
+                  onClick={() => handleSideChange(tab.value)}
+                  className={cn(
+                    "flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-lg text-sm font-semibold transition-all",
+                    side === tab.value
+                      ? "bg-card shadow text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {tab.label}
+                  <span className={cn(
+                    "text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center",
+                    side === tab.value ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                  )}>
+                    {sideCounts[tab.value]}
                   </span>
-                  <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg"
-                    disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg"
-                    disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
-                    <ChevronRight className="h-4 w-4" />
+                </button>
+              ))}
+            </div>
+
+            {/* Saved views */}
+            <SavedViews activeView={null} onApply={handleApplySavedView} />
+
+            {/* Filters */}
+            <PlayLibraryFilters
+              filters={filters}
+              onChange={handleFilterChange}
+              plays={plays.filter(p => p.side === side)}
+              side={side}
+            />
+
+            {/* Content */}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-24">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : filteredSorted.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="h-14 w-14 rounded-2xl bg-secondary flex items-center justify-center mb-4">
+                  <Library className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <h3 className="text-base font-display font-semibold">
+                  {plays.filter(p => p.side === side).length === 0
+                    ? `No ${sideDisplayName} plays yet`
+                    : 'No plays match your filters'}
+                </h3>
+                <p className="text-muted-foreground text-sm mt-1.5 max-w-xs leading-relaxed">
+                  {plays.filter(p => p.side === side).length === 0
+                    ? `Start building your ${sideDisplayName} playbook. Organize plays by formation, concept, and situation.`
+                    : 'Try widening your search or clearing one of the active filters.'}
+                </p>
+                <div className="flex items-center gap-3 mt-5">
+                  {activeFilterCount > 0 && (
+                    <Button variant="outline" size="sm" className="rounded-xl" onClick={() => handleFilterChange(DEFAULT_FILTERS)}>
+                      Clear Filters
+                    </Button>
+                  )}
+                  <Button size="sm" className="rounded-xl gap-1.5" onClick={() => navigate('/play-designer')}>
+                    <Plus className="h-4 w-4" /> New Play
                   </Button>
                 </div>
               </div>
-            </>
-          )}
+            ) : (
+              <>
+                <PlayTable
+                  plays={pagePlays}
+                  sort={sort}
+                  onSort={handleSort}
+                  selected={selected}
+                  onSelect={handleSelect}
+                  onSelectAll={handleSelectAll}
+                  onOpen={(play) => setDetailPlay(play)}
+                  onEdit={(play) => navigate(`/play-designer?id=${play.id}`)}
+                  onDuplicate={(play) => duplicateMutation.mutate(play)}
+                  onToggleFav={(play) => toggleFavMutation.mutate(play)}
+                  onToggleActive={(play) => toggleActiveMutation.mutate(play)}
+                  onAddToScript={handleAddToScript}
+                  onAddToGamePlan={handleAddToGamePlan}
+                />
+
+                {/* Pagination */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1 pb-10">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>Per page:</span>
+                    <div className="flex items-center gap-1">
+                      {PAGE_SIZES.map(size => (
+                        <button
+                          key={size}
+                          onClick={() => { setPageSize(size); setPage(1); }}
+                          className={cn(
+                            "h-7 w-9 text-xs rounded-md font-semibold transition-colors",
+                            pageSize === size
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-secondary hover:bg-secondary/80 text-muted-foreground"
+                          )}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-muted-foreground/60">·</span>
+                    <span>{filteredSorted.length} total</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filteredSorted.length)} of {filteredSorted.length}
+                    </span>
+                    <Button variant="outline" size="icon" className="h-7 w-7 rounded-lg"
+                      disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="h-7 w-7 rounded-lg"
+                      disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Right detail panel */}
+      {/* ── Right detail panel ── */}
       {detailPlay && (
-        <div className="w-80 xl:w-96 shrink-0 border-l border-border overflow-hidden">
+        <div className="w-[340px] xl:w-[380px] shrink-0 border-l border-border overflow-hidden shadow-[-8px_0_24px_-8px_rgba(0,0,0,0.08)]">
           <PlayDetailPanel
             play={detailPlay}
             onClose={() => setDetailPlay(null)}
@@ -362,7 +365,7 @@ export default function PlayLibrary() {
         </div>
       )}
 
-      {/* Bulk action bar */}
+      {/* ── Bulk action bar ── */}
       <BulkActionBar
         count={selected.length}
         onClear={() => setSelected([])}

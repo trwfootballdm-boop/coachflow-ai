@@ -76,7 +76,7 @@ export default function PlayLibraryFilters({ filters, onChange, plays, side }) {
   const playFamilies = side === 'defense' ? PLAY_FAMILIES_DEF : PLAY_FAMILIES_OFF;
 
   return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
+    <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
       {/* Main filter row */}
       <div className="p-3 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[180px] max-w-xs">
