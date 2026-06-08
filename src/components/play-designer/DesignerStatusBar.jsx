@@ -27,10 +27,36 @@ export default function DesignerStatusBar({
 }) {
   const hint = TOOL_HINTS[activeTool] || 'Select a tool to begin';
 
+  const hasErrors = validation?.messages?.some(m => m.severity === 'error');
+  const hasWarnings = validation?.messages?.some(m => m.severity === 'warning');
+  const errorCount = validation?.messages?.filter(m => m.severity === 'error').length || 0;
+  const warningCount = validation?.messages?.filter(m => m.severity === 'warning').length || 0;
+
   return (
     <div className="h-7 bg-gray-950 border-t border-gray-800 flex items-center px-3 gap-4 shrink-0 text-[10px] text-gray-500 font-mono">
       {/* Active tool hint */}
       <span className="flex-1 truncate">{hint}</span>
+
+      {/* Validation status */}
+      {validation && (
+        <>
+          {hasErrors && (
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-500/20 text-red-400 animate-pulse">
+              ⚠ {errorCount} error{errorCount !== 1 ? 's' : ''} - fix before saving
+            </span>
+          )}
+          {hasWarnings && !hasErrors && (
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-400">
+              ⚠ {warningCount} warning{warningCount !== 1 ? 's' : ''}
+            </span>
+          )}
+          {!hasErrors && !hasWarnings && validation.valid && (
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-500/20 text-green-400">
+              ✓ Valid formation
+            </span>
+          )}
+        </>
+      )}
 
       {/* Drawing in progress */}
       {drawingPointCount > 0 && (

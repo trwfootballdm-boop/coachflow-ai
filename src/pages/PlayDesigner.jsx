@@ -235,6 +235,24 @@ export default function PlayDesigner() {
   const handleSave = () => {
     const name = play.name || play.play_name;
     if (!name?.trim()) { toast.error('Play name is required — add it in the Play panel →'); return; }
+    
+    // Pre-save validation for offensive plays
+    if (play.side === 'offense' && validation) {
+      const errors = validation.messages.filter(m => m.severity === 'error');
+      if (errors.length > 0) {
+        toast.error('Cannot save: ' + errors[0].message);
+        return;
+      }
+      
+      const warnings = validation.messages.filter(m => m.severity === 'warning');
+      if (warnings.length > 0) {
+        const confirmed = window.confirm(
+          `This play has ${warnings.length} warning(s):\n\n${warnings.map(w => '• ' + w.message).join('\n')}\n\nSave anyway?`
+        );
+        if (!confirmed) return;
+      }
+    }
+    
     saveMutation.mutate(play);
   };
 
