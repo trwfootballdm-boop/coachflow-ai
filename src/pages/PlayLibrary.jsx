@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTeam } from '@/components/TeamContext';
@@ -15,6 +16,7 @@ import PlayDetailPanel from '@/components/play-library/PlayDetailPanel';
 import BulkActionBar from '@/components/play-library/BulkActionBar';
 import SavedViews from '@/components/play-library/SavedViews';
 import PlayCardList from '@/components/play-library/PlayCardList';
+import AIPlayCreatorPanel from '@/components/ai-play/AIPlayCreatorPanel';
 
 const SIDE_TABS = [
   { value: 'offense', label: 'Offense' },
@@ -96,6 +98,7 @@ export default function PlayLibrary() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState([]);
   const [detailPlay, setDetailPlay] = useState(null);
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
 
   const { data: plays = [], isLoading } = useQuery({
     queryKey: ['plays', activeTeamId],
@@ -219,6 +222,13 @@ export default function PlayLibrary() {
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" className="gap-1.5 rounded-xl text-xs hidden sm:flex">
                 <Download className="h-3.5 w-3.5" /> Export
+              </Button>
+              <Button
+                variant="outline" size="sm"
+                className="gap-1.5 rounded-xl text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950/40"
+                onClick={() => setAiPanelOpen(true)}
+              >
+                <Wand2 className="h-3.5 w-3.5" /> AI Create
               </Button>
               <Button onClick={() => navigate('/play-designer')} size="sm" className="gap-1.5 rounded-xl">
                 <Plus className="h-4 w-4" /> New Play
@@ -380,6 +390,12 @@ export default function PlayLibrary() {
           />
         </div>
       )}
+
+      {/* AI Play Creator panel */}
+      <AIPlayCreatorPanel
+        isOpen={aiPanelOpen}
+        onClose={() => { setAiPanelOpen(false); queryClient.invalidateQueries({ queryKey: ['plays'] }); }}
+      />
 
       {/* Bulk action bar */}
       <BulkActionBar

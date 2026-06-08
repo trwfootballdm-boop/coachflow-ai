@@ -28,11 +28,10 @@ const navItems = [
   { label: 'Practice Scripts', icon: FileText, path: '/practice-scripts' },
   { label: 'Scout Cards', icon: Shield, path: '/scout-cards' },
   { label: 'Wristband', icon: Rows3, path: '/wristband' },
-  { label: 'Install Sheets', icon: Calendar, path: '/install-sheets' },
+  { label: 'Starter Library', icon: BookOpen, path: '/install-sheets' },
   { label: 'Scouting', icon: Search, path: '/scouting' },
   { label: 'Roster', icon: Users, path: '/roster' },
-  { label: 'Starter Library', icon: BookOpen, path: '/starter-library' },
-  { label: 'Terminology', icon: FileText, path: '/terminology' },
+  { label: 'Terminology', icon: Calendar, path: '/terminology' },
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];
 
