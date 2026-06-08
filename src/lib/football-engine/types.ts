@@ -1,5 +1,80 @@
 // src/lib/football-engine/types.ts
 
+export type PlayFamily =
+  | 'run'
+  | 'quick'
+  | 'dropback'
+  | 'screen'
+  | 'play_action'
+  | 'special';
+
+export type InstallTier = 1 | 2 | 3;
+
+export type Situation =
+  | 'base'
+  | 'first_and_ten'
+  | 'second_short'
+  | 'second_medium'
+  | 'second_long'
+  | 'third_short'
+  | 'third_medium'
+  | 'third_long'
+  | 'fourth_short'
+  | 'red_zone'
+  | 'backed_up'
+  | 'two_minute'
+  | 'four_minute'
+  | 'shot'
+  | 'goal_line'
+  | 'pressure';
+
+export type Personnel = '10' | '11' | '12' | '20' | '21' | 'empty';
+
+export interface SeedConcept {
+  id: string;
+  name: string;
+  family: PlayFamily;
+  description: string;
+  installTier: InstallTier;
+  core: boolean;
+  formations: string[];
+  motions: string[];
+  tags: string[];
+  situations: Situation[];
+  bestVs: string[];
+  complements: string[];
+  teachingPoints: string[];
+}
+
+export interface SeedCall {
+  id: string;
+  conceptId: string;
+  callName: string;
+  formation: string;
+  personnel: Personnel;
+  motion?: string;
+  tags: string[];
+  situations: Situation[];
+  notes?: string;
+  weeklyDefault?: boolean;
+}
+
+export interface SeedFormation {
+  id: string;
+  name: string;
+  family: '2x2' | '3x1' | 'compressed' | 'empty' | 'pistol' | 'tight';
+  personnel: Personnel[];
+  notes?: string;
+}
+
+export interface SeedTag {
+  id: string;
+  name: string;
+  kind: 'formation' | 'motion' | 'run' | 'pass' | 'screen' | 'protection' | 'rpo';
+  appliesTo: PlayFamily[];
+  notes?: string;
+}
+
 export type TeamSide = 'offense' | 'defense' | 'special_teams';
 
 export type RoleType =
