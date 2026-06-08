@@ -205,3 +205,35 @@ export interface WeeklyGamePlan {
   callSheet: CallSheet;
   priorities: string[];
 }
+
+// Play Logging
+export interface LoggedPlay {
+  id: string;
+  gameId: string;
+  quarter: number;
+  clock: string;
+  down: 1 | 2 | 3 | 4;
+  distance: number;
+  yardLine: number;
+  hash?: 'left' | 'middle' | 'right';
+  fieldZone?: 'backed_up' | 'open_field' | 'fringe' | 'red_zone' | 'goal_line';
+  playId?: string;
+  playName: string;
+  concept?: string;
+  formation?: string;
+  personnel?: string;
+  defensiveLook?: {
+    front?: string;
+    coverage?: string;
+    pressure?: string;
+  };
+  result?: {
+    yards: number;
+    success?: boolean;
+    explosive?: boolean;
+    turnover?: boolean;
+    sack?: boolean;
+    penalty?: boolean;
+  };
+  notes?: string[];
+}
