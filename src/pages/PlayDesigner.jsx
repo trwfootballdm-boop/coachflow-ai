@@ -12,6 +12,7 @@ import ToolRail              from '@/components/play-designer/ToolRail';
 import CanvasWorkspace       from '@/components/play-designer/CanvasWorkspace';
 import InspectorPanel        from '@/components/play-designer/InspectorPanel';
 import DesignerStatusBar     from '@/components/play-designer/DesignerStatusBar';
+import AnimationControlPanel from '@/components/play-designer/AnimationControlPanel';
 import { validateOffensivePlay } from '@/lib/football-engine/validation';
 import { analyzeConcepts } from '@/lib/football-engine/concepts';
 import { analyzeDefensiveReaction } from '@/lib/football-engine/reactions';
@@ -88,6 +89,10 @@ export default function PlayDesigner() {
 
   // ── AI panel state ──
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
+
+  // ── Animation state ──
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [animationSpeed, setAnimationSpeed] = useState(1);
 
   // ── Editor state ──
   const [activeTool,       setActiveTool]       = useState('select');
@@ -389,22 +394,37 @@ export default function PlayDesigner() {
           onRedo={diagram.redo}
         />
 
-        <CanvasWorkspace
-          players={diag.players}
-          paths={diag.paths}
-          annotations={diag.annotations}
-          selectedPlayerId={selectedPlayerId}
-          selectedPathId={selectedPathId}
-          activeTool={activeTool}
-          onSelectPlayer={(id) => { setSelectedPlayerId(id); setSelectedPathId(null); }}
-          onSelectPath={(id) => { setSelectedPathId(id); setSelectedPlayerId(null); }}
-          onMovePlayer={movePlayer}
-          onAddPlayer={addPlayer}
-          onCommitPath={commitPath}
-          onDrawingChange={setDrawingPts}
-          diag={diag}
-          diagram={diagram}
-        />
+        <div className="flex flex-1 overflow-hidden">
+          <CanvasWorkspace
+            players={diag.players}
+            paths={diag.paths}
+            annotations={diag.annotations}
+            selectedPlayerId={selectedPlayerId}
+            selectedPathId={selectedPathId}
+            activeTool={activeTool}
+            onSelectPlayer={(id) => { setSelectedPlayerId(id); setSelectedPathId(null); }}
+            onSelectPath={(id) => { setSelectedPathId(id); setSelectedPlayerId(null); }}
+            onMovePlayer={movePlayer}
+            onAddPlayer={addPlayer}
+            onCommitPath={commitPath}
+            onDrawingChange={setDrawingPts}
+            diag={diag}
+            diagram={diagram}
+          />
+
+          {/* Animation control overlay */}
+          <div className="absolute bottom-20 right-8 z-20">
+            <AnimationControlPanel
+              paths={diag.paths}
+              players={diag.players}
+              isAnimating={isAnimating}
+              onToggleAnimation={() => setIsAnimating(!isAnimating)}
+              onReset={() => setIsAnimating(false)}
+              speed={animationSpeed}
+              onSpeedChange={setAnimationSpeed}
+            />
+          </div>
+        </div>
 
         <InspectorPanel
           play={play}
