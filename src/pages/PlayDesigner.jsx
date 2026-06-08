@@ -297,6 +297,13 @@ export default function PlayDesigner() {
         onFlip={flipHorizontal}
         onToggleFav={() => setPlay(p => ({ ...p, is_favorite: !p.is_favorite }))}
         onDelete={handleDelete}
+        onAICreate={() => setAiPanelOpen(true)}
+      />
+
+      {/* AI Play Creator slide-in panel */}
+      <AIPlayCreatorPanel
+        isOpen={aiPanelOpen}
+        onClose={() => setAiPanelOpen(false)}
       />
 
       {/* ── Main editor row ── */}

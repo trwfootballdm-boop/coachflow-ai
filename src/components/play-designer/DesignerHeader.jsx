@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Save, Copy, FlipHorizontal, Layers,
-  MoreHorizontal, Star, StarOff, Printer, Eye, GitBranch
+  MoreHorizontal, Star, StarOff, Printer, Eye, GitBranch, Wand2
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -20,7 +20,7 @@ const SIDE_BADGE = {
 export default function DesignerHeader({
   play, isDirty, isSaving, isNew,
   onBack, onSave, onSaveNewVersion, onDuplicate, onFlip,
-  onToggleFav, onDelete, onPrint,
+  onToggleFav, onDelete, onPrint, onAICreate,
 }) {
   const name = play.name || play.play_name || 'Untitled Play';
   const side = play.side || 'offense';
