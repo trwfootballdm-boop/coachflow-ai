@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { BookMarked, NotebookPen, UserRound, X } from 'lucide-react';
-import { usePlayLibraryStore } from '@/lib/football-engine/playLibraryStore.js';
+import { usePlayLibraryStore, playLibraryStore } from '@/lib/football-engine/playLibraryStore.js';
 
 export default function PlayDetailDrawer({ open, onClose, conceptId, callId }) {
   const state = usePlayLibraryStore();
@@ -16,9 +16,23 @@ export default function PlayDetailDrawer({ open, onClose, conceptId, callId }) {
     [callId, state.calls]
   );
 
+  const [description, setDescription] = useState(concept?.description ?? '');
   const [conceptNotes, setConceptNotes] = useState('');
   const [callNotes, setCallNotes] = useState(call?.notes ?? '');
+  const [callDetailNotes, setCallDetailNotes] = useState(call?.detailNotes ?? '');
+  const [callActivation, setCallActivation] = useState(call?.activation ?? 'library');
   const [playerFitNotes, setPlayerFitNotes] = useState('');
+  const [formationsInput, setFormationsInput] = useState(concept?.formations?.join(', ') ?? '');
+  const [tagsInput, setTagsInput] = useState(concept?.tags?.join(', ') ?? '');
+  const [complementsInput, setComplementsInput] = useState(concept?.complements?.join(', ') ?? '');
+  const [teachingPointsInput, setTeachingPointsInput] = useState(concept?.teachingPoints?.join('\n') ?? '');
+  const [featuredPlayersInput, setFeaturedPlayersInput] = useState('');
+  const [preferredBallCarrier, setPreferredBallCarrier] = useState('');
+  const [preferredTarget, setPreferredTarget] = useState('');
+  const [readKey, setReadKey] = useState('');
+  const [attackPlayer, setAttackPlayer] = useState('');
+  const [avoidPlayer, setAvoidPlayer] = useState('');
+  const [matchupNotes, setMatchupNotes] = useState('');
 
   if (!open || !concept) return null;
 
@@ -56,7 +70,8 @@ export default function PlayDetailDrawer({ open, onClose, conceptId, callId }) {
             <label className="block">
               <FieldLabel label="Description" />
               <textarea
-                defaultValue={concept.description}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
                 rows={4}
                 className={inputClass}
               />
@@ -74,10 +89,10 @@ export default function PlayDetailDrawer({ open, onClose, conceptId, callId }) {
             </label>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <TagField label="Formations" values={concept.formations} />
-              <TagField label="Tags" values={concept.tags} />
+              <EditableTagField label="Formations" value={formationsInput} onChange={setFormationsInput} />
+              <EditableTagField label="Tags" value={tagsInput} onChange={setTagsInput} />
               <TagField label="Situations" values={concept.situations} />
-              <TagField label="Complements" values={concept.complements} />
+              <EditableTagField label="Complements" value={complementsInput} onChange={setComplementsInput} />
             </div>
           </DrawerSection>
 
@@ -99,11 +114,22 @@ export default function PlayDetailDrawer({ open, onClose, conceptId, callId }) {
                   />
                 </label>
 
+                <label className="block">
+                  <FieldLabel label="Detail notes" />
+                  <textarea
+                    value={callDetailNotes}
+                    onChange={(e) => setCallDetailNotes(e.target.value)}
+                    rows={3}
+                    placeholder="Alert, hash preference, or execution reminder..."
+                    className={inputClass}
+                  />
+                </label>
+
                 <div className="grid gap-3 md:grid-cols-2">
                   <ReadOnlyField label="Formation" value={call.formation} />
                   <ReadOnlyField label="Personnel" value={call.personnel} />
                   <ReadOnlyField label="Motion" value={call.motion || 'None'} />
-                  <ReadOnlyField label="Activation" value={call.activation} />
+                  <SelectField label="Activation" value={callActivation} onChange={setCallActivation} options={['library', 'weekly_candidate', 'installed', 'practiced', 'callsheet']} />
                 </div>
               </>
             ) : (
@@ -147,7 +173,33 @@ export default function PlayDetailDrawer({ open, onClose, conceptId, callId }) {
           <button
             type="button"
             onClick={() => {
-              // wire to real update actions next
+              playLibraryStore.updateConcept(concept.id, {
+                description,
+                detailNotes: conceptNotes,
+                formations: parseCsv(formationsInput),
+                tags: parseCsv(tagsInput),
+                complements: parseCsv(complementsInput),
+                teachingPoints: parseLines(teachingPointsInput),
+              });
+
+              if (call) {
+                playLibraryStore.updateCall(call.id, {
+                  notes: callNotes,
+                  detailNotes: callDetailNotes,
+                  activation: callActivation,
+                });
+
+                playLibraryStore.updatePlayerFitNotes(call.id, {
+                  featuredPlayers: parseCsv(featuredPlayersInput),
+                  preferredBallCarrier,
+                  preferredTarget,
+                  readKey,
+                  attackPlayer,
+                  avoidPlayer,
+                  matchupNotes,
+                });
+              }
+
               onClose();
             }}
             className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
@@ -215,5 +267,46 @@ function ReadOnlyField({ label, value }) {
   );
 }
 
+function EditableTagField({ label, value, onChange }) {
+  return (
+    <div className="rounded-xl border border-border bg-background/50 px-3 py-3">
+      <FieldLabel label={label} />
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Comma-separated values"
+        className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring"
+      />
+    </div>
+  );
+}
+
+function SelectField({ label, value, onChange, options }) {
+  return (
+    <div className="rounded-xl border border-border bg-background/50 px-3 py-3">
+      <FieldLabel label={label} />
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring"
+      >
+        {options.map((opt) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 const inputClass =
   'w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-ring focus:ring-2 focus:ring-ring/20';
+
+function parseCsv(value) {
+  if (!value) return [];
+  return value.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+function parseLines(value) {
+  if (!value) return [];
+  return value.split('\n').map((s) => s.trim()).filter(Boolean);
+}
