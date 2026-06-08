@@ -6,6 +6,14 @@
       "type": "string",
       "description": "Reference to Team"
     },
+    "formation_name": {
+      "type": "string",
+      "description": "Formation name e.g. Shotgun Trips Right, I-Formation"
+    },
+    "short_name": {
+      "type": "string",
+      "description": "Short code e.g. SHG-TR, I-FORM"
+    },
     "side_of_ball": {
       "type": "string",
       "enum": [
@@ -13,35 +21,95 @@
         "defense",
         "special_teams"
       ],
-      "description": "Which side of ball this formation belongs to"
+      "default": "offense"
     },
-    "formation_name": {
+    "formation_type": {
       "type": "string",
-      "description": "Formation name e.g. Shotgun 2x2, I-Formation, 4-3 Over"
+      "enum": [
+        "shotgun",
+        "under_center",
+        "pistol",
+        "empty",
+        "spread",
+        "pro_style",
+        "wing_t",
+        "i_formation",
+        "single_back",
+        "multiple",
+        "4-3",
+        "3-4",
+        "nickel",
+        "dime",
+        "custom"
+      ],
+      "description": "Formation family/category"
     },
-    "formation_family": {
+    "personnel": {
       "type": "string",
-      "description": "Formation family e.g. base, goal_line, short_yardage, spread, blitz_package"
+      "description": "Personnel grouping e.g. 11, 12, 21, 22"
     },
-    "strength_call": {
-      "type": "string",
-      "description": "Strength call e.g. left, right, balanced, unbalanced"
-    },
-    "notes": {
-      "type": "string"
+    "player_count": {
+      "type": "integer",
+      "default": 11,
+      "description": "Number of players in formation"
     },
     "diagram_data": {
       "type": "object",
-      "description": "Structured player alignment data for the formation canvas"
+      "description": "Player positions: array of {token_id, position_code, display_label, x, y, team_side, role_type}"
     },
-    "active": {
+    "description": {
+      "type": "string",
+      "description": "Formation description and usage notes"
+    },
+    "strengths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Best situations e.g. passing, running, play-action"
+    },
+    "weaknesses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Vulnerabilities e.g. blitz pickup, run defense"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Custom tags for organization"
+    },
+    "is_favorite": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_active": {
       "type": "boolean",
       "default": true
+    },
+    "usage_count": {
+      "type": "integer",
+      "default": 0,
+      "description": "How many times this formation has been used"
+    },
+    "last_used_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_by_id": {
+      "type": "string",
+      "description": "Coach who created it"
+    },
+    "notes": {
+      "type": "string"
     }
   },
   "required": [
     "team_id",
-    "side_of_ball",
-    "formation_name"
+    "formation_name",
+    "side_of_ball"
   ]
 }

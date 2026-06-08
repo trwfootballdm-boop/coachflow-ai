@@ -168,21 +168,21 @@ export default function ToolRail({ activeTool, onSelectTool, onUndo, onRedo }) {
         ))}
       </div>
 
-      {/* History Controls */}
-      <div className="px-2 py-2 border-t border-gray-800 bg-gray-950/50">
+      {/* Footer Actions */}
+      <div className="px-2 py-2 border-t border-gray-800">
         <div className="flex items-center gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={() => handleAction('undo')}
-                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all text-xs"
+                onClick={onUndo}
+                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-all text-xs"
               >
                 <Undo2 className="h-3.5 w-3.5" />
                 <span>Undo</span>
               </button>
             </TooltipTrigger>
-            <TooltipContent side="top" className="bg-gray-900 border-gray-700 text-white text-xs">
-              <p>Undo last action</p>
+            <TooltipContent side="right" className="bg-gray-900 border-gray-700 text-white text-xs">
+              <p>Undo</p>
               <p className="text-gray-500 text-[10px] mt-0.5">⌘Z</p>
             </TooltipContent>
           </Tooltip>
@@ -190,15 +190,15 @@ export default function ToolRail({ activeTool, onSelectTool, onUndo, onRedo }) {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={() => handleAction('redo')}
-                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all text-xs"
+                onClick={onRedo}
+                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-all text-xs"
               >
                 <Redo2 className="h-3.5 w-3.5" />
                 <span>Redo</span>
               </button>
             </TooltipTrigger>
-            <TooltipContent side="top" className="bg-gray-900 border-gray-700 text-white text-xs">
-              <p>Redo last action</p>
+            <TooltipContent side="right" className="bg-gray-900 border-gray-700 text-white text-xs">
+              <p>Redo</p>
               <p className="text-gray-500 text-[10px] mt-0.5">⌘Y</p>
             </TooltipContent>
           </Tooltip>
