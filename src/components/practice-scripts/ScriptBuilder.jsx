@@ -286,6 +286,45 @@ export default function ScriptBuilder({ script, onBack, teamId }) {
           onClose={() => setShowPlayPicker(false)}
         />
       )}
+
+      {/* Push to Game Plan dialog */}
+      <Dialog open={showPushToGamePlan} onOpenChange={setShowPushToGamePlan}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-display">Push Plays to Game Plan</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <p className="text-sm text-muted-foreground">
+              All plays in this script ({[...new Set(displayItems.map(i => i.play_id).filter(Boolean))].length} plays) will be added to the selected game plan's first section and marked as practiced.
+            </p>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground block mb-1.5">Select Game Plan</label>
+              <Select value={selectedGamePlanId} onValueChange={setSelectedGamePlanId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a game plan…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {gamePlans.map(gp => (
+                    <SelectItem key={gp.id} value={gp.id}>
+                      {gp.title}{gp.opponent_name ? ` — vs ${gp.opponent_name}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => setShowPushToGamePlan(false)}>
+                Cancel
+              </Button>
+              <Button className="flex-1 gap-1.5" onClick={pushToGamePlan}
+                disabled={!selectedGamePlanId || pushingToGamePlan}>
+                {pushingToGamePlan ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
+                Push Plays
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
