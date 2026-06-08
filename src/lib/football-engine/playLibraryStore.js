@@ -1,7 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import {
-  getSeedPlayLibrary,
-} from '@/lib/football-engine/seedData.js';
+import { getSeedPlayLibrary } from '@/lib/football-engine/seedData.js';
 
 const seed = getSeedPlayLibrary();
 
@@ -46,17 +44,32 @@ function buildSeedState() {
       ...concept,
       archived: false,
       custom: false,
+      detailNotes: '',
     })),
     calls: seed.calls.map((call) => ({
       ...call,
       activation: call.weeklyDefault ? 'weekly_candidate' : 'library',
       archived: false,
       custom: false,
+      detailNotes: call.notes ?? '',
+      playerFitNotes: {
+        featuredPlayers: [],
+        preferredBallCarrier: '',
+        preferredTarget: '',
+        readKey: '',
+        attackPlayer: '',
+        avoidPlayer: '',
+        matchupNotes: '',
+      },
     })),
     formations: seed.formations,
     tags: seed.tags,
     selectedConceptId: seed.concepts[0]?.id ?? null,
   };
+}
+
+function mergeUnique(base, incoming) {
+  return Array.from(new Set([...base, ...incoming].filter(Boolean)));
 }
 
 export const playLibraryStore = {
@@ -124,6 +137,110 @@ export const playLibraryStore = {
     }));
   },
 
+  updateConcept(conceptId, updates) {
+    setStore((prev) => ({
+      ...prev,
+      concepts: prev.concepts.map((concept) => {
+        if (concept.id !== conceptId) return concept;
+
+        return {
+          ...concept,
+          ...updates,
+          formations: updates.formations ?? concept.formations,
+          motions: updates.motions ?? concept.motions,
+          tags: updates.tags ?? concept.tags,
+          situations: updates.situations ?? concept.situations,
+          bestVs: updates.bestVs ?? concept.bestVs,
+          complements: updates.complements ?? concept.complements,
+          teachingPoints: updates.teachingPoints ?? concept.teachingPoints,
+        };
+      }),
+    }));
+  },
+
+  updateCall(callId, updates) {
+    setStore((prev) => ({
+      ...prev,
+      calls: prev.calls.map((call) => {
+        if (call.id !== callId) return call;
+
+        return {
+          ...call,
+          ...updates,
+          tags: updates.tags ?? call.tags,
+          situations: updates.situations ?? call.situations,
+          notes: updates.notes ?? call.notes,
+          detailNotes: updates.detailNotes ?? call.detailNotes,
+        };
+      }),
+    }));
+  },
+
+  updatePlayerFitNotes(callId, updates) {
+    setStore((prev) => ({
+      ...prev,
+      calls: prev.calls.map((call) => {
+        if (call.id !== callId) return call;
+
+        const current = call.playerFitNotes ?? {
+          featuredPlayers: [],
+          preferredBallCarrier: '',
+          preferredTarget: '',
+          readKey: '',
+          attackPlayer: '',
+          avoidPlayer: '',
+          matchupNotes: '',
+        };
+
+        return {
+          ...call,
+          playerFitNotes: {
+            ...current,
+            ...updates,
+            featuredPlayers: updates.featuredPlayers
+              ? mergeUnique([], updates.featuredPlayers)
+              : current.featuredPlayers,
+          },
+        };
+      }),
+    }));
+  },
+
+  promoteCallToCallsheet(callId) {
+    setStore((prev) => ({
+      ...prev,
+      calls: prev.calls.map((call) => {
+        if (call.id !== callId) return call;
+        if (call.archived) return call;
+
+        const allowed =
+          call.activation === 'practiced' ||
+          call.activation === 'installed' ||
+          call.activation === 'weekly_candidate';
+
+        return {
+          ...call,
+          activation: allowed ? 'callsheet' : call.activation,
+        };
+      }),
+    }));
+  },
+
+  removeCallFromCallsheet(callId) {
+    setStore((prev) => ({
+      ...prev,
+      calls: prev.calls.map((call) => {
+        if (call.id !== callId) return call;
+        if (call.activation !== 'callsheet') return call;
+
+        return {
+          ...call,
+          activation: 'practiced',
+        };
+      }),
+    }));
+  },
+
   toggleArchiveConcept(conceptId) {
     setStore((prev) => {
       const concept = prev.concepts.find((item) => item.id === conceptId);
@@ -135,7 +252,9 @@ export const playLibraryStore = {
           item.id === conceptId ? { ...item, archived } : item
         ),
         calls: prev.calls.map((call) =>
-          call.conceptId === conceptId ? { ...call, archived, activation: archived ? 'archived' : 'library' } : call
+          call.conceptId === conceptId
+            ? { ...call, archived, activation: archived ? 'archived' : 'library' }
+            : call
         ),
       };
     });
