@@ -124,12 +124,19 @@ export default function ScriptPeriod({ item, index, onUpdate, onDelete, onMoveUp
               className="bg-card border-border h-9 text-sm" />
           </div>
 
-          <div className="flex items-center justify-between pt-1">
-            <Button variant="outline" size="sm" className="gap-1.5 rounded-lg text-xs h-7" onClick={onAddPlay}>
-              <Plus className="h-3.5 w-3.5" /> Add Play to Period
-            </Button>
+          <div className="flex items-center justify-between pt-1 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-lg text-xs h-7" onClick={onAddPlay}>
+                <Plus className="h-3.5 w-3.5" /> Add Play
+              </Button>
+              {onPushToGamePlan && item.play_id && (
+                <Button variant="outline" size="sm" className="gap-1.5 rounded-lg text-xs h-7" onClick={onPushToGamePlan}>
+                  <ClipboardList className="h-3.5 w-3.5" /> Push to Game Plan
+                </Button>
+              )}
+            </div>
             <Button variant="ghost" size="sm" className="gap-1.5 rounded-lg text-xs h-7 text-destructive hover:text-destructive" onClick={onDelete}>
-              <Trash2 className="h-3.5 w-3.5" /> Remove Period
+              <Trash2 className="h-3.5 w-3.5" /> Remove
             </Button>
           </div>
         </div>
