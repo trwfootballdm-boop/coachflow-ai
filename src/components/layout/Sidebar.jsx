@@ -31,7 +31,8 @@ const navItems = [
   { label: 'Install Sheets', icon: Calendar, path: '/install-sheets' },
   { label: 'Scouting', icon: Search, path: '/scouting' },
   { label: 'Roster', icon: Users, path: '/roster' },
-  { label: 'Terminology', icon: BookOpen, path: '/terminology' },
+  { label: 'Starter Library', icon: BookOpen, path: '/starter-library' },
+  { label: 'Terminology', icon: FileText, path: '/terminology' },
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];
 

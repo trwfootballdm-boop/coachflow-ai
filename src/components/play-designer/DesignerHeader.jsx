@@ -60,6 +60,19 @@ export default function DesignerHeader({
 
       {/* Actions */}
       <div className="flex items-center gap-1 shrink-0">
+        {/* AI Create */}
+        {onAICreate && (
+          <Button
+            variant="ghost" size="sm"
+            className="h-8 gap-1.5 px-2.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 text-xs font-bold"
+            onClick={onAICreate}
+            title="AI Play Creator"
+          >
+            <Wand2 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">AI Create</span>
+          </Button>
+        )}
+
         {/* Flip */}
         <Button variant="ghost" size="sm"
           className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-gray-800"

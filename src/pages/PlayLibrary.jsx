@@ -5,7 +5,7 @@ import { useTeam } from '@/components/TeamContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Library, Loader2, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { Plus, Library, Loader2, ChevronLeft, ChevronRight, Download, Wand2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
