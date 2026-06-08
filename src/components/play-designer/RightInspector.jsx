@@ -17,8 +17,12 @@ export default function RightInspector({
   play, onPlayChange,
   selectedPlayer, onPlayerChange, onDuplicatePlayer, onRemovePlayer,
   selectedPath, onPathChange, onRemovePath,
+  activeTab,
+  onTabChange,
 }) {
-  const [tab, setTab] = useState('play');
+  const [internalTab, setInternalTab] = useState('play');
+  const tab = activeTab !== undefined ? activeTab : internalTab;
+  const setTab = onTabChange || setInternalTab;
   const hasSelection = Boolean(selectedPlayer || selectedPath);
 
   useEffect(() => {
@@ -32,24 +36,17 @@ export default function RightInspector({
   }, [selectedPlayer, selectedPath]);
 
   return (
-    <aside className="flex w-72 shrink-0 flex-col border-l border-border bg-card/80 backdrop-blur-xl">
-      <div className="border-b border-border px-4 py-3">
+    <div className="flex h-full flex-col">
+      <div className="border-b border-border px-3 py-2">
         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           Inspector
         </div>
-        <div className="mt-1 flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-sm font-semibold text-foreground">
-              {hasSelection ? 'Selection properties' : 'Play setup'}
-            </div>
-            <div className="truncate text-xs text-muted-foreground">
-              {hasSelection ? selectionLabel : 'Formation, tags, notes, and structure'}
-            </div>
-          </div>
-        </div>
+        <h3 className="text-xs font-semibold text-foreground mt-0.5">
+          {hasSelection ? selectionLabel : (play?.formation || 'Play Details')}
+        </h3>
       </div>
 
-      <div className="grid grid-cols-3 gap-1 border-b border-border p-2">
+      <div className="grid grid-cols-3 gap-0.5 border-b border-border px-1 py-1">
         {TABS.map((item) => {
           const active = tab === item.id;
           return (
@@ -114,6 +111,6 @@ export default function RightInspector({
           <PlayMetaPanel play={play} onChange={onPlayChange} />
         )}
       </div>
-    </aside>
+    </div>
   );
 }

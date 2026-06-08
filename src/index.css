@@ -228,7 +228,7 @@
 
   .designer-shell {
     @apply flex flex-col bg-gray-900;
-    height: calc(100vh - 0px);
+    height: 100vh;
     overflow: hidden;
   }
 

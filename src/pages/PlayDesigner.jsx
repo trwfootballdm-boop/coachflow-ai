@@ -10,9 +10,9 @@ import DesignerCommandBar    from '@/components/play-designer/DesignerCommandBar
 import AIPlayCreatorPanel    from '@/components/ai-play/AIPlayCreatorPanel';
 import ToolRail              from '@/components/play-designer/ToolRail';
 import CanvasWorkspace       from '@/components/play-designer/CanvasWorkspace';
-import InspectorPanel        from '@/components/play-designer/InspectorPanel';
+import CollapsibleInspector  from '@/components/play-designer/CollapsibleInspector';
+import BottomControlBar      from '@/components/play-designer/BottomControlBar';
 import DesignerStatusBar     from '@/components/play-designer/DesignerStatusBar';
-import AnimationControlPanel from '@/components/play-designer/AnimationControlPanel';
 import { validateOffensivePlay } from '@/lib/football-engine/validation';
 import { analyzeConcepts } from '@/lib/football-engine/concepts';
 import { analyzeDefensiveReaction } from '@/lib/football-engine/reactions';
@@ -126,7 +126,6 @@ export default function PlayDesigner() {
       if (plays[0]) {
         setPlay(plays[0]);
         setSaved(plays[0]);
-        // Load diagram data if stored on play
         if (plays[0].diagram_data) {
           const { players, paths, annotations } = plays[0].diagram_data;
           diagram.push({
@@ -156,7 +155,6 @@ export default function PlayDesigner() {
       if (e.key === 'p' || e.key === 'P') setActiveTool('add_player');
       if (e.key === 'Escape') { 
         e.preventDefault();
-        // Cancel drawing if in progress, otherwise deselect
         if (drawingPts > 0) {
           setDrawingPts(0);
         } else {
@@ -183,8 +181,6 @@ export default function PlayDesigner() {
 
   const movePlayer = useCallback((id, x, y) => {
     const updated = diag.players.map(p => p.token_id === id ? { ...p, x, y } : p);
-    // Update current state without pushing to history
-    // History will be pushed on mouse up (handled by canvas)
   }, [diag]);
 
   const addPlayer = useCallback((coords) => {
@@ -220,12 +216,10 @@ export default function PlayDesigner() {
   }, [diag, selectedPlayerId, updateDiagram]);
 
   const commitPath = useCallback((newPath) => {
-    // Validate path has minimum required points
     if (!newPath || !newPath.points || newPath.points.length < 2) {
       toast.error('Path needs at least 2 points');
       return;
     }
-    
     updateDiagram({ paths: [...diag.paths, newPath] });
     toast.success('Route added');
   }, [diag, updateDiagram]);
@@ -274,7 +268,6 @@ export default function PlayDesigner() {
     const name = play.name || play.play_name;
     if (!name?.trim()) { toast.error('Play name is required — add it in the Play panel →'); return; }
     
-    // Pre-save validation for offensive plays
     if (play.side === 'offense' && validation) {
       const errors = validation.messages.filter(m => m.severity === 'error');
       if (errors.length > 0) {
@@ -336,7 +329,7 @@ export default function PlayDesigner() {
   const selectedPath   = diag.paths.find(p => p.path_id === selectedPathId)     || null;
   const selectedType   = selectedPlayer ? 'player' : selectedPath ? 'path' : null;
 
-  // ── Analysis Pipeline (ordered: validation → concepts → reaction → timing → adjustments → install) ──
+  // ── Analysis Pipeline ──
   const validation = useMemo(() => {
     if (play.side !== 'offense') return null;
     return validateOffensivePlay(diag);
@@ -419,7 +412,8 @@ export default function PlayDesigner() {
         onAICreate={() => setAiPanelOpen(true)}
       />
 
-      <div className="designer-body">
+      {/* Main canvas area with left tool rail and right inspector */}
+      <div className="flex-1 flex overflow-hidden">
         <ToolRail
           activeTool={activeTool}
           onSelectTool={setActiveTool}
@@ -427,7 +421,8 @@ export default function PlayDesigner() {
           onRedo={diagram.redo}
         />
 
-        <div className="flex flex-1 overflow-hidden">
+        {/* Canvas + bottom bar */}
+        <div className="flex-1 flex flex-col overflow-hidden">
           <CanvasWorkspace
             players={diag.players}
             paths={diag.paths}
@@ -445,21 +440,23 @@ export default function PlayDesigner() {
             diagram={diagram}
           />
 
-          {/* Animation control overlay */}
-          <div className="absolute bottom-20 right-8 z-20">
-            <AnimationControlPanel
-              paths={diag.paths}
-              players={diag.players}
-              isAnimating={isAnimating}
-              onToggleAnimation={() => setIsAnimating(!isAnimating)}
-              onReset={() => setIsAnimating(false)}
-              speed={animationSpeed}
-              onSpeedChange={setAnimationSpeed}
-            />
-          </div>
+          {/* Bottom control bar with animation and save */}
+          <BottomControlBar
+            paths={diag.paths}
+            players={diag.players}
+            isAnimating={isAnimating}
+            onToggleAnimation={() => setIsAnimating(!isAnimating)}
+            onReset={() => setIsAnimating(false)}
+            speed={animationSpeed}
+            onSpeedChange={setAnimationSpeed}
+            onSave={handleSave}
+            isDirty={isDirty}
+            isSaving={saveMutation.isPending}
+          />
         </div>
 
-        <InspectorPanel
+        {/* Collapsible right inspector */}
+        <CollapsibleInspector
           play={play}
           onPlayChange={setPlay}
           selectedPlayer={selectedPlayer}
@@ -472,6 +469,7 @@ export default function PlayDesigner() {
         />
       </div>
 
+      {/* Status bar */}
       <DesignerStatusBar
         activeTool={activeTool}
         playerCount={diag.players.length}
