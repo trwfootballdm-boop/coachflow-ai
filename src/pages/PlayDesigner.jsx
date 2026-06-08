@@ -299,6 +299,16 @@ export default function PlayDesigner() {
     });
   }, [diag, concepts]);
 
+  const timing = useMemo(() => {
+    if (!concepts) return null;
+    return analyzeTiming(diag, concepts, {
+      coverageShell: 'cover_3',
+      frontFamily: 'even',
+      pressure: '5man',
+      middleField: 'closed',
+    });
+  }, [diag, concepts]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
