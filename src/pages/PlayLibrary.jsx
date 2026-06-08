@@ -1,36 +1,100 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTeam } from '@/components/TeamContext';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { PenTool, Search, Star, MoreVertical, Trash2, Copy, Edit, Filter, Plus, Library } from "lucide-react";
+import { Plus, Library, Loader2, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-const playTypeColors = {
-  run: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  pass: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  screen: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
-  play_action: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  rpo: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-  trick: 'bg-pink-500/10 text-pink-600 dark:text-pink-400',
-  special_teams: 'bg-gray-500/10 text-gray-600 dark:text-gray-400',
+import PlayLibraryFilters from '@/components/play-library/PlayLibraryFilters';
+import PlayTable from '@/components/play-library/PlayTable';
+import PlayDetailPanel from '@/components/play-library/PlayDetailPanel';
+import BulkActionBar from '@/components/play-library/BulkActionBar';
+import SavedViews from '@/components/play-library/SavedViews';
+
+const SIDE_TABS = [
+  { value: 'offense', label: 'Offense' },
+  { value: 'defense', label: 'Defense' },
+  { value: 'special_teams', label: 'Special Teams' },
+];
+
+const PAGE_SIZES = [10, 25, 50];
+
+const DEFAULT_FILTERS = {
+  search: '', formation: 'all', playFamily: 'all', concept: 'all',
+  installDay: 'all', difficulty: 'all', status: 'all', favoritesOnly: false,
+  downDistance: [], fieldZone: [], fronts: [], coverages: [], situations: [],
 };
+
+const DEFAULT_SORT = { field: 'updated_date', dir: 'desc' };
+
+function applySort(plays, sort) {
+  return [...plays].sort((a, b) => {
+    let av = a[sort.field] ?? '';
+    let bv = b[sort.field] ?? '';
+    if (sort.field === 'updated_date') {
+      av = new Date(av).getTime() || 0;
+      bv = new Date(bv).getTime() || 0;
+    }
+    if (av < bv) return sort.dir === 'asc' ? -1 : 1;
+    if (av > bv) return sort.dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+}
+
+function applyFilters(plays, filters, side) {
+  return plays.filter(play => {
+    // Side of ball
+    if (play.side !== side) return false;
+
+    // Search
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      const searchable = [play.name, play.play_name, play.short_name, play.formation, play.concept, play.play_family]
+        .filter(Boolean).join(' ').toLowerCase();
+      if (!searchable.includes(q)) return false;
+    }
+
+    // Dropdowns
+    if (filters.formation !== 'all' && play.formation !== filters.formation) return false;
+    if (filters.playFamily !== 'all' && play.play_family !== filters.playFamily) return false;
+    if (filters.concept !== 'all' && play.concept !== filters.concept) return false;
+    if (filters.installDay !== 'all' && String(play.install_day) !== filters.installDay) return false;
+    if (filters.difficulty !== 'all' && play.age_level_difficulty !== filters.difficulty) return false;
+    if (filters.status === 'active' && play.is_active === false) return false;
+    if (filters.status === 'inactive' && play.is_active !== false) return false;
+    if (filters.favoritesOnly && !play.is_favorite) return false;
+
+    // Tag filters — any match within each active group
+    const matchTag = (selectedTags, playTags) => {
+      if (!selectedTags.length) return true;
+      if (!playTags?.length) return false;
+      return selectedTags.some(t => playTags.includes(t));
+    };
+    if (!matchTag(filters.downDistance, play.down_distance_tags)) return false;
+    if (!matchTag(filters.fieldZone, play.field_zone_tags)) return false;
+    if (!matchTag(filters.fronts, play.opponent_front_tags)) return false;
+    if (!matchTag(filters.coverages, play.coverage_tags)) return false;
+
+    return true;
+  });
+}
 
 export default function PlayLibrary() {
   const { activeTeamId } = useTeam();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [filterSide, setFilterSide] = useState('all');
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  const [side, setSide] = useState('offense');
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [sort, setSort] = useState(DEFAULT_SORT);
+  const [pageSize, setPageSize] = useState(25);
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState([]);
+  const [detailPlay, setDetailPlay] = useState(null);
 
   const { data: plays = [], isLoading } = useQuery({
     queryKey: ['plays', activeTeamId],
@@ -38,23 +102,23 @@ export default function PlayLibrary() {
     enabled: !!activeTeamId,
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Play.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['plays'] });
-      toast.success('Play deleted');
-    },
+  const toggleFavMutation = useMutation({
+    mutationFn: (play) => base44.entities.Play.update(play.id, { is_favorite: !play.is_favorite }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plays'] }),
   });
 
-  const toggleFavMutation = useMutation({
-    mutationFn: ({ id, isFav }) => base44.entities.Play.update(id, { is_favorite: !isFav }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plays'] }),
+  const toggleActiveMutation = useMutation({
+    mutationFn: (play) => base44.entities.Play.update(play.id, { is_active: play.is_active === false ? true : false }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plays'] });
+      toast.success('Status updated');
+    },
   });
 
   const duplicateMutation = useMutation({
     mutationFn: async (play) => {
       const { id, created_date, updated_date, created_by_id, ...data } = play;
-      return base44.entities.Play.create({ ...data, name: `${data.name} (Copy)` });
+      return base44.entities.Play.create({ ...data, name: `${data.name || data.play_name} (Copy)` });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plays'] });
@@ -62,165 +126,257 @@ export default function PlayLibrary() {
     },
   });
 
-  const filteredPlays = plays.filter(play => {
-    const matchSearch = !searchQuery || 
-      play.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      play.formation?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      play.concept?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchType = filterType === 'all' || play.play_type === filterType;
-    const matchSide = filterSide === 'all' || play.side === filterSide;
-    const matchFav = !showFavoritesOnly || play.is_favorite;
-    return matchSearch && matchType && matchSide && matchFav;
+  const bulkMutation = useMutation({
+    mutationFn: async ({ ids, data }) => {
+      await Promise.all(ids.map(id => base44.entities.Play.update(id, data)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plays'] });
+      setSelected([]);
+      toast.success('Plays updated');
+    },
   });
 
+  const handleSort = (field) => {
+    setSort(prev => ({ field, dir: prev.field === field && prev.dir === 'asc' ? 'desc' : 'asc' }));
+    setPage(1);
+  };
+
+  const handleFilterChange = (newFilters) => {
+    setFilters(newFilters);
+    setPage(1);
+    setSelected([]);
+  };
+
+  const handleSideChange = (newSide) => {
+    setSide(newSide);
+    setPage(1);
+    setSelected([]);
+    setDetailPlay(null);
+  };
+
+  const filteredSorted = useMemo(() => {
+    return applySort(applyFilters(plays, filters, side), sort);
+  }, [plays, filters, side, sort]);
+
+  const totalPages = Math.ceil(filteredSorted.length / pageSize);
+  const pagePlays = filteredSorted.slice((page - 1) * pageSize, page * pageSize);
+
+  const handleSelectAll = () => {
+    setSelected(selected.length === pagePlays.length ? [] : pagePlays.map(p => p.id));
+  };
+
+  const handleSelect = (id) => {
+    setSelected(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
+  };
+
+  const handleApplySavedView = (viewFilters) => {
+    setFilters(prev => ({ ...DEFAULT_FILTERS, ...viewFilters }));
+    if (viewFilters.side) setSide(viewFilters.side);
+    setPage(1);
+  };
+
+  const handleAddToScript = (play) => {
+    toast.info(`"${play.name || play.play_name}" — select a script in Practice Scripts to add it.`);
+  };
+  const handleAddToGamePlan = (play) => {
+    toast.info(`"${play.name || play.play_name}" — select a game plan to add it.`);
+  };
+
+  const sideCounts = useMemo(() => {
+    const counts = { offense: 0, defense: 0, special_teams: 0 };
+    plays.forEach(p => { if (counts[p.side] !== undefined) counts[p.side]++; });
+    return counts;
+  }, [plays]);
+
+  const activeFilterCount = [
+    filters.search, filters.formation !== 'all' && filters.formation,
+    filters.playFamily !== 'all', filters.concept !== 'all',
+    filters.installDay !== 'all', filters.difficulty !== 'all',
+    filters.status !== 'all', filters.favoritesOnly,
+    ...filters.downDistance, ...filters.fieldZone, ...filters.fronts, ...filters.coverages, ...filters.situations,
+  ].filter(Boolean).length;
+
   return (
-    <div className="space-y-6 max-w-7xl">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-display font-bold">Play Library</h1>
-          <p className="text-sm text-muted-foreground">{plays.length} plays in your playbook</p>
+    <div className={cn("flex gap-0 h-[calc(100vh-64px)] -m-6 overflow-hidden", detailPlay && "")}>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-display font-bold">Play Library</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {plays.length} total plays · {filteredSorted.length} matching
+                {activeFilterCount > 0 && (
+                  <Badge variant="secondary" className="ml-2 text-[10px]">{activeFilterCount} filters active</Badge>
+                )}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-xl text-xs hidden sm:flex">
+                <Download className="h-3.5 w-3.5" /> Export
+              </Button>
+              <Button onClick={() => navigate('/play-designer')} size="sm" className="gap-1.5 rounded-xl">
+                <Plus className="h-4 w-4" /> New Play
+              </Button>
+            </div>
+          </div>
+
+          {/* Side-of-ball tabs */}
+          <div className="flex items-center gap-1 bg-secondary/60 p-1 rounded-xl w-fit">
+            {SIDE_TABS.map(tab => (
+              <button
+                key={tab.value}
+                onClick={() => handleSideChange(tab.value)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                  side === tab.value
+                    ? "bg-card shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {tab.label}
+                <span className={cn(
+                  "text-[10px] font-bold px-1.5 py-0.5 rounded-full",
+                  side === tab.value ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"
+                )}>
+                  {sideCounts[tab.value]}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Saved views */}
+          <SavedViews activeView={null} onApply={handleApplySavedView} />
+
+          {/* Filters */}
+          <PlayLibraryFilters
+            filters={filters}
+            onChange={handleFilterChange}
+            plays={plays.filter(p => p.side === side)}
+            side={side}
+          />
+
+          {/* Content area */}
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : filteredSorted.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="h-16 w-16 rounded-2xl bg-secondary flex items-center justify-center mb-4">
+                <Library className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-display font-semibold">
+                {plays.filter(p => p.side === side).length === 0 ? `No ${side.replace('_', ' ')} plays yet` : 'No plays match your filters'}
+              </h3>
+              <p className="text-muted-foreground text-sm mt-1 max-w-sm">
+                {plays.filter(p => p.side === side).length === 0
+                  ? 'Build your playbook by creating plays organized by formation, concept, and situation.'
+                  : 'Try adjusting or clearing your filters to see more plays.'}
+              </p>
+              <div className="flex items-center gap-3 mt-4">
+                {activeFilterCount > 0 && (
+                  <Button variant="outline" size="sm" className="rounded-xl" onClick={() => handleFilterChange(DEFAULT_FILTERS)}>
+                    Clear All Filters
+                  </Button>
+                )}
+                <Button size="sm" className="rounded-xl gap-1.5" onClick={() => navigate('/play-designer')}>
+                  <Plus className="h-4 w-4" /> New Play
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <PlayTable
+                plays={pagePlays}
+                sort={sort}
+                onSort={handleSort}
+                selected={selected}
+                onSelect={handleSelect}
+                onSelectAll={handleSelectAll}
+                onOpen={(play) => setDetailPlay(play)}
+                onEdit={(play) => navigate(`/play-designer?id=${play.id}`)}
+                onDuplicate={(play) => duplicateMutation.mutate(play)}
+                onToggleFav={(play) => toggleFavMutation.mutate(play)}
+                onToggleActive={(play) => toggleActiveMutation.mutate(play)}
+                onAddToScript={handleAddToScript}
+                onAddToGamePlan={handleAddToGamePlan}
+              />
+
+              {/* Pagination */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2 pb-8">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>Show</span>
+                  <div className="flex items-center gap-1">
+                    {PAGE_SIZES.map(size => (
+                      <button
+                        key={size}
+                        onClick={() => { setPageSize(size); setPage(1); }}
+                        className={cn(
+                          "h-7 w-9 text-xs rounded-md font-medium transition-colors",
+                          pageSize === size ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-secondary/80 text-muted-foreground"
+                        )}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                  <span>· {filteredSorted.length} plays</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    Page {page} of {totalPages || 1}
+                  </span>
+                  <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg"
+                    disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg"
+                    disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
-        <Button onClick={() => navigate('/play-designer')} className="gap-2 rounded-xl">
-          <Plus className="h-4 w-4" />
-          New Play
-        </Button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search plays..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-secondary/50 border-0"
+      {/* Right detail panel */}
+      {detailPlay && (
+        <div className="w-80 xl:w-96 shrink-0 border-l border-border overflow-hidden">
+          <PlayDetailPanel
+            play={detailPlay}
+            onClose={() => setDetailPlay(null)}
+            onEdit={(play) => navigate(`/play-designer?id=${play.id}`)}
+            onDuplicate={(play) => duplicateMutation.mutate(play)}
+            onToggleFav={(play) => toggleFavMutation.mutate(play)}
+            onAddToScript={handleAddToScript}
+            onAddToGamePlan={handleAddToGamePlan}
           />
         </div>
-        <Select value={filterSide} onValueChange={setFilterSide}>
-          <SelectTrigger className="w-[130px] bg-secondary/50 border-0">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Sides</SelectItem>
-            <SelectItem value="offense">Offense</SelectItem>
-            <SelectItem value="defense">Defense</SelectItem>
-            <SelectItem value="special_teams">Special Teams</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-[140px] bg-secondary/50 border-0">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            {['run', 'pass', 'screen', 'play_action', 'rpo', 'trick'].map(t => (
-              <SelectItem key={t} value={t}>{t.replace(/_/g, ' ')}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          variant={showFavoritesOnly ? "default" : "secondary"}
-          size="sm"
-          onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-          className="gap-1.5 rounded-lg"
-        >
-          <Star className={cn("h-3.5 w-3.5", showFavoritesOnly && "fill-current")} />
-          Favorites
-        </Button>
-      </div>
-
-      {/* Play grid */}
-      {filteredPlays.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="p-4 rounded-2xl bg-secondary mb-4">
-            <Library className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-display font-semibold">No plays found</h3>
-          <p className="text-muted-foreground text-sm mt-1">
-            {plays.length === 0 ? 'Create your first play to get started.' : 'Try adjusting your filters.'}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredPlays.map((play) => (
-            <Card
-              key={play.id}
-              className="border-0 shadow-sm hover:shadow-md transition-all cursor-pointer group"
-              onClick={() => navigate(`/play-designer?id=${play.id}`)}
-            >
-              <CardContent className="p-4">
-                {/* Play header */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-sm truncate">{play.name}</h3>
-                      {play.is_favorite && (
-                        <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" />
-                      )}
-                    </div>
-                    {play.formation && (
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{play.formation}</p>
-                    )}
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <MoreVertical className="h-3.5 w-3.5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/play-designer?id=${play.id}`); }}>
-                        <Edit className="h-4 w-4 mr-2" /> Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); duplicateMutation.mutate(play); }}>
-                        <Copy className="h-4 w-4 mr-2" /> Duplicate
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavMutation.mutate({ id: play.id, isFav: play.is_favorite });
-                      }}>
-                        <Star className="h-4 w-4 mr-2" /> {play.is_favorite ? 'Unfavorite' : 'Favorite'}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(play.id); }}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
-                {/* Play diagram placeholder */}
-                <div className="aspect-[3/2] rounded-lg bg-emerald-900/20 dark:bg-emerald-900/30 mb-3 flex items-center justify-center overflow-hidden">
-                  <PenTool className="h-8 w-8 text-emerald-700/30 dark:text-emerald-500/20" />
-                </div>
-
-                {/* Badges */}
-                <div className="flex flex-wrap gap-1.5">
-                  {play.play_type && (
-                    <Badge variant="secondary" className={cn("text-[10px] px-2 py-0 capitalize", playTypeColors[play.play_type])}>
-                      {play.play_type.replace(/_/g, ' ')}
-                    </Badge>
-                  )}
-                  {play.concept && (
-                    <Badge variant="secondary" className="text-[10px] px-2 py-0">
-                      {play.concept}
-                    </Badge>
-                  )}
-                  {play.personnel && (
-                    <Badge variant="outline" className="text-[10px] px-2 py-0">
-                      {play.personnel} personnel
-                    </Badge>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
       )}
+
+      {/* Bulk action bar */}
+      <BulkActionBar
+        count={selected.length}
+        onClear={() => setSelected([])}
+        onAddToScript={() => handleAddToScript({ name: `${selected.length} plays` })}
+        onAddToGamePlan={() => handleAddToGamePlan({ name: `${selected.length} plays` })}
+        onFavorite={() => bulkMutation.mutate({ ids: selected, data: { is_favorite: true } })}
+        onActivate={() => bulkMutation.mutate({ ids: selected, data: { is_active: true } })}
+        onDeactivate={() => bulkMutation.mutate({ ids: selected, data: { is_active: false } })}
+        onDuplicate={async () => {
+          const selectedPlays = plays.filter(p => selected.includes(p.id));
+          for (const play of selectedPlays) await duplicateMutation.mutateAsync(play);
+          setSelected([]);
+        }}
+      />
     </div>
   );
 }
