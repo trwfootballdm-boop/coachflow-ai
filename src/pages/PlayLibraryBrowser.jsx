@@ -1,16 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Search, Filter, Download, Eye, ChevronRight, Star, Zap,
-  Shield, Users, BookOpen, Package, Layers, X, ArrowLeft
+  Shield, Users, BookOpen, Package, Layers, X, ArrowLeft,
+  Sparkles, Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import LibraryItemPreview from '@/components/library/LibraryItemPreview';
 import LibraryImportDialog from '@/components/library/LibraryImportDialog';
+import { seedStarterLibrary } from '@/lib/playTemplates/seeder';
 
 const SIDE_TABS = [
   { key: 'all', label: 'All', icon: BookOpen },
@@ -49,6 +52,7 @@ const PACK_ICONS = {
 };
 
 export default function PlayLibraryBrowser() {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,6 +100,30 @@ export default function PlayLibraryBrowser() {
     return packs.filter(p => p.side_of_ball === activeTab);
   }, [packs, activeTab]);
 
+  const seedMutation = useMutation({
+    mutationFn: async () => {
+      const teamId =
+        (typeof window !== 'undefined' && window.localStorage?.getItem('activeTeamId')) ||
+        'team-default';
+      return seedStarterLibrary(teamId);
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['libraryPacks'] });
+      queryClient.invalidateQueries({ queryKey: ['libraryItems'] });
+      queryClient.invalidateQueries({ queryKey: ['libraryBundles'] });
+      toast.success(
+        `Installed ${result.packs} packs, ${result.items} plays, ${result.bundles} bundles.`
+      );
+    },
+    onError: (err) => {
+      console.error('[PlayLibrary] seed failed', err);
+      toast.error(err?.message || 'Could not install starter library');
+    },
+  });
+
+  const isEmpty = packs.length === 0 && allItems.length === 0;
+  const showSeedHero = isEmpty || (!selectedPack && view === 'packs' && visiblePacks.length === 0 && activeTab === 'all');
+
   return (
     <div className="flex flex-col h-full min-h-screen bg-background">
       {/* Header */}
@@ -132,6 +160,20 @@ export default function PlayLibraryBrowser() {
               className="gap-1.5 rounded-xl h-8 text-xs">
               <Layers className="h-3.5 w-3.5" /> Bundles
             </Button>
+            {!isEmpty && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={seedMutation.isPending}
+                onClick={() => seedMutation.mutate()}
+                data-testid="refresh-templates-btn"
+                className="gap-1.5 rounded-xl h-8 text-xs">
+                {seedMutation.isPending
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <Sparkles className="h-3.5 w-3.5" />}
+                Refresh Templates
+              </Button>
+            )}
           </div>
         </div>
 
@@ -157,8 +199,35 @@ export default function PlayLibraryBrowser() {
         {/* Main content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
+          {/* EMPTY-STATE SEED HERO */}
+          {showSeedHero && (
+            <div
+              data-testid="library-empty-state"
+              className="border border-dashed border-primary/40 rounded-2xl bg-card p-8 text-center max-w-2xl mx-auto">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 mb-4">
+                <Sparkles className="h-7 w-7 text-primary" />
+              </div>
+              <h2 className="font-display font-bold text-lg mb-2">Install Starter Library</h2>
+              <p className="text-sm text-muted-foreground mb-5 max-w-md mx-auto">
+                Pre-drawn plays, formations, and defenses across I-Form, Spread,
+                Wing-T, and base defenses. Browse, preview, and import any play
+                into your team's playbook in one click.
+              </p>
+              <Button
+                size="default"
+                disabled={seedMutation.isPending}
+                onClick={() => seedMutation.mutate()}
+                data-testid="seed-library-btn"
+                className="gap-2 rounded-xl">
+                {seedMutation.isPending
+                  ? <><Loader2 className="h-4 w-4 animate-spin" /> Installing…</>
+                  : <><Sparkles className="h-4 w-4" /> Install Starter Library</>}
+              </Button>
+            </div>
+          )}
+
           {/* PACKS VIEW */}
-          {view === 'packs' && !selectedPack && (
+          {view === 'packs' && !selectedPack && !showSeedHero && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {visiblePacks.map(pack => {
@@ -326,7 +395,6 @@ function LibraryItemCard({ item, onPreview, onImport }) {
 
   return (
     <div className="group border border-border rounded-xl bg-card hover:border-primary/40 hover:shadow-sm transition-all overflow-hidden">
-      {/* Mini diagram preview */}
       {hasDiagram && (
         <div className="h-24 bg-[#1a5c2e] relative overflow-hidden">
           <MiniDiagram players={item.diagram_data.players} paths={item.diagram_data.paths || []} />
@@ -402,14 +470,11 @@ function MiniDiagram({ players, paths }) {
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
-      {/* Field stripes */}
       {[0,1,2,3].map(i => (
         <rect key={i} x={0} y={i * 24} width={W} height={24}
           fill={i % 2 === 0 ? '#1a5c2e' : '#174f27'} />
       ))}
-      {/* LOS */}
       <line x1={0} y1={H/2} x2={W} y2={H/2} stroke="rgba(255,255,100,0.3)" strokeWidth={0.8} strokeDasharray="4,2" />
-      {/* Paths */}
       {paths.map((path, i) => {
         const color = PATH_COLORS[path.path_type] || '#fff';
         const pts = path.points || [];
@@ -417,7 +482,6 @@ function MiniDiagram({ players, paths }) {
         const d = pts.map((p, j) => `${j === 0 ? 'M' : 'L'} ${scaleX(p.x)} ${scaleY(p.y)}`).join(' ');
         return <path key={i} d={d} fill="none" stroke={color} strokeWidth={1.2} strokeLinecap="round" opacity={0.85} />;
       })}
-      {/* Players */}
       {players.map((p, i) => {
         const x = scaleX(p.x), y = scaleY(p.y);
         const isD = p.team_side === 'defense';

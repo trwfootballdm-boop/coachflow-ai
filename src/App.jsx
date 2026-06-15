@@ -77,6 +77,7 @@ const AuthenticatedApp = () => {
             <Route path="/play-designer" element={<PlayDesigner />} />
             <Route path="/play-library" element={<PlayLibrary />} />
             <Route path="/library-browser" element={<PlayLibraryBrowser />} />
+            <Route path="/play-templates" element={<PlayLibraryBrowser />} />
             <Route path="/game-planning" element={<GamePlanning />} />
             <Route path="/practice-scripts" element={<PracticeScripts />} />
             <Route path="/scout-cards" element={<ScoutCards />} />
