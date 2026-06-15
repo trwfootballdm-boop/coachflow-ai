@@ -16,6 +16,7 @@ import BulkActionBar from '@/components/play-library/BulkActionBar';
 import SavedViews from '@/components/play-library/SavedViews';
 import PlayCardList from '@/components/play-library/PlayCardList';
 import AIPlayCreatorPanel from '@/components/ai-play/AIPlayCreatorPanel';
+import { seedPlaysForTeam } from '@/lib/football-engine/seedPlays';
 
 const SIDE_TABS = [
   { value: 'offense', label: 'Offense' },
@@ -98,6 +99,21 @@ export default function PlayLibrary() {
   const [selected, setSelected] = useState([]);
   const [detailPlay, setDetailPlay] = useState(null);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  const handleSeedLibrary = async () => {
+    if (!activeTeamId) return;
+    setIsSeeding(true);
+    try {
+      await seedPlaysForTeam(activeTeamId);
+      queryClient.invalidateQueries({ queryKey: ['plays'] });
+      toast.success('Sample playbook loaded — 28 starter plays added!');
+    } catch (e) {
+      toast.error('Failed to load sample plays');
+    } finally {
+      setIsSeeding(false);
+    }
+  };
 
   const { data: plays = [], isLoading } = useQuery({
     queryKey: ['plays', activeTeamId],
@@ -292,6 +308,17 @@ export default function PlayLibrary() {
                 {activeFilterCount > 0 && (
                   <Button variant="outline" size="sm" className="rounded-xl" onClick={() => handleFilterChange(DEFAULT_FILTERS)}>
                     Clear All Filters
+                  </Button>
+                )}
+                {plays.filter(p => p.side === side).length === 0 && plays.length === 0 && (
+                  <Button
+                    variant="outline" size="sm"
+                    className="rounded-xl gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800"
+                    onClick={handleSeedLibrary}
+                    disabled={isSeeding}
+                  >
+                    {isSeeding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Library className="h-4 w-4" />}
+                    {isSeeding ? 'Loading...' : 'Load Sample Playbook'}
                   </Button>
                 )}
                 <Button size="sm" className="rounded-xl gap-1.5" onClick={() => navigate('/play-designer')}>
