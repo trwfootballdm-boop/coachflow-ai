@@ -8,72 +8,11 @@
     },
     "formation_name": {
       "type": "string",
-      "description": "Formation name e.g. Shotgun Trips Right, I-Formation"
-    },
-    "short_name": {
-      "type": "string",
-      "description": "Short code e.g. SHG-TR, I-FORM"
-    },
-    "side_of_ball": {
-      "type": "string",
-      "enum": [
-        "offense",
-        "defense",
-        "special_teams"
-      ],
-      "default": "offense"
-    },
-    "formation_type": {
-      "type": "string",
-      "enum": [
-        "shotgun",
-        "under_center",
-        "pistol",
-        "empty",
-        "spread",
-        "pro_style",
-        "wing_t",
-        "i_formation",
-        "single_back",
-        "multiple",
-        "4-3",
-        "3-4",
-        "nickel",
-        "dime",
-        "custom"
-      ],
-      "description": "Formation family/category"
+      "description": "Formation name e.g. Shotgun Trips Right"
     },
     "personnel": {
       "type": "string",
-      "description": "Personnel grouping e.g. 11, 12, 21, 22"
-    },
-    "player_count": {
-      "type": "integer",
-      "default": 11,
-      "description": "Number of players in formation"
-    },
-    "diagram_data": {
-      "type": "object",
-      "description": "Player positions: array of {token_id, position_code, display_label, x, y, team_side, role_type}"
-    },
-    "description": {
-      "type": "string",
-      "description": "Formation description and usage notes"
-    },
-    "strengths": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Best situations e.g. passing, running, play-action"
-    },
-    "weaknesses": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Vulnerabilities e.g. blitz pickup, run defense"
+      "description": "Personnel grouping e.g. 11, 12, 21"
     },
     "tags": {
       "type": "array",
@@ -82,34 +21,48 @@
       },
       "description": "Custom tags for organization"
     },
-    "is_favorite": {
-      "type": "boolean",
-      "default": false
-    },
-    "is_active": {
-      "type": "boolean",
-      "default": true
-    },
-    "usage_count": {
-      "type": "integer",
-      "default": 0,
-      "description": "How many times this formation has been used"
-    },
-    "last_used_date": {
+    "thumbnail_data_url": {
       "type": "string",
-      "format": "date-time"
+      "description": "Base64 data URL or hosted URL for diagram thumbnail"
     },
-    "created_by_id": {
-      "type": "string",
-      "description": "Coach who created it"
+    "players": {
+      "type": "array",
+      "description": "Player token positions",
+      "items": {
+        "type": "object",
+        "properties": {
+          "position": {
+            "type": "string",
+            "description": "Position code e.g. QB, WR, TE"
+          },
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          }
+        }
+      }
     },
     "notes": {
       "type": "string"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "User ID of creator"
+    },
+    "is_template": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this is a reusable template"
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0
     }
   },
   "required": [
     "team_id",
-    "formation_name",
-    "side_of_ball"
+    "formation_name"
   ]
 }
