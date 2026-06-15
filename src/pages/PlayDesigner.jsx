@@ -520,8 +520,8 @@ export default function PlayDesigner() {
             isAnimating={isAnimating}
             animationSpeed={animationSpeed}
             onAnimationEnd={() => setIsAnimating(false)}
-            onSelectPlayer={(id) => { setSelectedPlayerId(id); setSelectedPathId(null); }}
-            onSelectPath={(id) => { setSelectedPathId(id); setSelectedPlayerId(null); }}
+            onSelectPlayer={(id) => { setSelectedPlayerId(id); if (id) setSelectedPathId(null); }}
+            onSelectPath={(id) => { setSelectedPathId(id); if (id) setSelectedPlayerId(null); }}
             onMovePlayer={movePlayer}
             onCommitMove={commitMove}
             onAddPlayer={addPlayer}
