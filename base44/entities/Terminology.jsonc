@@ -22,17 +22,13 @@
       ],
       "description": "Terminology category"
     },
-    "term": {
+    "key": {
       "type": "string",
-      "description": "The term used by this team"
+      "description": "The term/call used by this team"
     },
-    "standard_name": {
+    "value": {
       "type": "string",
-      "description": "Standard/common name for reference"
-    },
-    "definition": {
-      "type": "string",
-      "description": "Definition or description"
+      "description": "Definition or meaning of the term"
     },
     "aliases": {
       "type": "array",
@@ -40,6 +36,10 @@
         "type": "string"
       },
       "description": "Other names or codes for this term"
+    },
+    "position": {
+      "type": "string",
+      "description": "Position group this applies to e.g. QB, WR, OL"
     },
     "side": {
       "type": "string",
@@ -51,13 +51,16 @@
       ],
       "default": "offense"
     },
-    "notes": {
-      "type": "string"
+    "sort_order": {
+      "type": "integer",
+      "default": 0,
+      "description": "Display order"
     }
   },
   "required": [
     "team_id",
-    "term",
-    "category"
+    "category",
+    "key",
+    "value"
   ]
 }
