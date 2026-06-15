@@ -75,15 +75,21 @@ export default function GamePlanning() {
   });
 
   const createMutation = useMutation({
-    mutationFn: () => base44.entities.GamePlan.create({
-      ...form, team_id: activeTeamId, status: 'draft', call_sheet: {}
-    }),
+    mutationFn: () => {
+      if (!activeTeamId) throw new Error('No team selected');
+      return base44.entities.GamePlan.create({
+        ...form, team_id: activeTeamId, status: 'draft', call_sheet: {}
+      });
+    },
     onSuccess: (plan) => {
       queryClient.invalidateQueries({ queryKey: ['gamePlans'] });
       setShowCreate(false);
       setForm({ title: '', opponent_name: '', game_date: '', week_label: '', notes: '' });
       setOpenPlanId(plan.id);
       toast.success('Game plan created');
+    },
+    onError: (err) => {
+      toast.error(err?.message || 'Failed to create game plan');
     },
   });
 
@@ -195,7 +201,10 @@ export default function GamePlanning() {
               <Label className="text-xs">Notes</Label>
               <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className="mt-1.5 resize-none" />
             </div>
-            <Button onClick={() => createMutation.mutate()} disabled={!form.title || createMutation.isPending} className="w-full gap-2">
+            {!activeTeamId && (
+              <p className="text-xs text-destructive text-center">No team selected — go to Settings to create or select a team.</p>
+            )}
+            <Button onClick={() => createMutation.mutate()} disabled={!form.title.trim() || !activeTeamId || createMutation.isPending} className="w-full gap-2">
               {createMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               Create Game Plan
             </Button>
