@@ -156,9 +156,13 @@ export default function DesignerCanvas({
   selectedPlayerId,
   selectedPathId,
   activeTool,
+  isAnimating = false,
+  animationSpeed = 1,
+  onAnimationEnd,
   onSelectPlayer,
   onSelectPath,
   onMovePlayer,
+  onCommitMove,
   onAddPlayer,
   onCommitPath,
   zoom = 1,
@@ -170,6 +174,12 @@ export default function DesignerCanvas({
   const [drawing, setDrawing] = useState(null);
   const [cursor, setCursor] = useState({ x: 0, y: 0 });
   const [hover, setHover] = useState(null);
+  // Guard so the click that fires immediately after a dblclick doesn't
+  // re-open a new drawing on the canvas.
+  const justFinishedDrawingRef = useRef(false);
+  // Track that a player drag actually moved so we can decide whether to commit
+  // a history entry on pointerup (a click without drag shouldn't push history).
+  const dragMovedRef = useRef(false);
 
   const toSVG = useCallback((e) => {
     const svg = svgRef.current;
@@ -235,21 +245,30 @@ export default function DesignerCanvas({
     if (dragging && activeTool === 'select') {
       const player = players.find((p) => p.token_id === dragging);
       if (player && !player.locked) {
+        dragMovedRef.current = true;
         onMovePlayer(dragging, coords.x, coords.y);
       }
     }
   }, [dragging, activeTool, players, toSVG, onMovePlayer]);
 
   const handleSVGMouseUp = useCallback(() => {
+    if (dragging && dragMovedRef.current) {
+      // Commit ONE history entry for the entire drag gesture.
+      onCommitMove?.();
+    }
+    dragMovedRef.current = false;
     setDragging(null);
-  }, []);
+  }, [dragging, onCommitMove]);
 
   const handleSVGClick = useCallback((e) => {
     if (dragging) return;
-    
-    // Don't add points if we just finished drawing (dblclick)
-    if (drawing && drawing.points.length < 2) return;
-    
+
+    // Swallow the click that fires together with a dblclick that finished a route.
+    if (justFinishedDrawingRef.current) {
+      justFinishedDrawingRef.current = false;
+      return;
+    }
+
     const coords = toSVG(e);
 
     if (activeTool === 'add_player') {
@@ -268,26 +287,93 @@ export default function DesignerCanvas({
 
     onSelectPlayer?.(null);
     onSelectPath?.(null);
-  }, [dragging, activeTool, isDrawTool, drawing, toSVG, onAddPlayer, onSelectPlayer, onSelectPath]);
+  }, [dragging, activeTool, isDrawTool, toSVG, onAddPlayer, onSelectPlayer, onSelectPath]);
 
   const handleSVGDblClick = useCallback((e) => {
     if (!drawing || drawing.points.length < 2) return;
-    
+
     e.preventDefault();
     e.stopPropagation();
-    
+
     onCommitPath?.({
       ...drawing,
       path_id: `path_${Date.now()}`,
       stroke_width: 2.5,
     });
     setDrawing(null);
+    // Block the synthetic click that browsers fire alongside dblclick.
+    justFinishedDrawingRef.current = true;
   }, [drawing, onCommitPath]);
 
   useEffect(() => {
     window.addEventListener('mouseup', handleSVGMouseUp);
     return () => window.removeEventListener('mouseup', handleSVGMouseUp);
   }, [handleSVGMouseUp]);
+
+  // Inline animation playback. When isAnimating becomes true, advance animMs
+  // along an internal timeline and interpolate each player's position along
+  // its assigned path (by token_id).
+  const ANIM_DURATION = 3000;
+  const [animMs, setAnimMs] = useState(0);
+  const animRafRef = useRef(null);
+  const animLastTsRef = useRef(null);
+  const animSpeedRef = useRef(animationSpeed);
+  useEffect(() => { animSpeedRef.current = animationSpeed; }, [animationSpeed]);
+
+  useEffect(() => {
+    if (!isAnimating) {
+      if (animRafRef.current) cancelAnimationFrame(animRafRef.current);
+      animRafRef.current = null;
+      animLastTsRef.current = null;
+      setAnimMs(0);
+      return;
+    }
+
+    setAnimMs(0);
+    animLastTsRef.current = null;
+
+    const tick = (ts) => {
+      if (animLastTsRef.current == null) animLastTsRef.current = ts;
+      const delta = (ts - animLastTsRef.current) * animSpeedRef.current;
+      animLastTsRef.current = ts;
+      setAnimMs(prev => {
+        const next = prev + delta;
+        if (next >= ANIM_DURATION) {
+          if (animRafRef.current) cancelAnimationFrame(animRafRef.current);
+          animRafRef.current = null;
+          // Defer the end callback so React doesn't see a parent update during render.
+          setTimeout(() => onAnimationEnd?.(), 0);
+          return ANIM_DURATION;
+        }
+        animRafRef.current = requestAnimationFrame(tick);
+        return next;
+      });
+    };
+    animRafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (animRafRef.current) cancelAnimationFrame(animRafRef.current);
+      animRafRef.current = null;
+      animLastTsRef.current = null;
+    };
+  }, [isAnimating, onAnimationEnd]);
+
+  const animProgress = isAnimating ? Math.min(1, animMs / ANIM_DURATION) : 0;
+  const animatedPosFor = useCallback((player) => {
+    if (!isAnimating) return { x: player.x, y: player.y };
+    const path = paths.find(p => p.token_id === player.token_id);
+    if (!path || !path.points || path.points.length < 2) {
+      return { x: player.x, y: player.y };
+    }
+    const pts = path.points;
+    const totalSeg = pts.length - 1;
+    const segT = animProgress * totalSeg;
+    const seg = Math.min(Math.floor(segT), totalSeg - 1);
+    const lt = segT - seg;
+    const a = pts[seg];
+    const b = pts[seg + 1];
+    return { x: a.x + (b.x - a.x) * lt, y: a.y + (b.y - a.y) * lt };
+  }, [isAnimating, animProgress, paths]);
 
   const playableH = F.height - F.endZoneH * 2;
   const yardLines = Array.from({ length: 12 }, (_, i) => F.endZoneH + (i * playableH) / 11);
@@ -576,14 +662,16 @@ export default function DesignerCanvas({
               const isDef = player.team_side === 'defense';
               const shape = player.visual_style?.shape || (isDef ? 'square' : 'circle');
               const r = 14;
+              const pos = animatedPosFor(player);
 
               return (
                 <g
                   key={player.token_id}
-                  transform={`translate(${player.x}, ${player.y})`}
-                  style={{ cursor: player.locked ? 'not-allowed' : 'grab' }}
+                  transform={`translate(${pos.x}, ${pos.y})`}
+                  style={{ cursor: isAnimating ? 'default' : (player.locked ? 'not-allowed' : 'grab') }}
                   onMouseDown={(e) => {
                     e.stopPropagation();
+                    if (isAnimating) return;
                     if (activeTool === 'select' || !activeTool || activeTool === '') {
                       onSelectPlayer?.(player.token_id);
                       onSelectPath?.(null);

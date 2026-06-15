@@ -50,40 +50,78 @@ const DEFAULT_PLAYERS = [
 ];
 
 // ─── History helpers ───────────────────────────────────────────────────────────
+// Two-tier state: `current` is the live (possibly mid-drag) diagram. `push` snapshots
+// it onto an undo stack; `replace` updates the live state WITHOUT a history entry
+// (used during drags so undo doesn't see 100 intermediate positions).
 function useHistory(initial) {
   const [stack, setStack]   = useState([initial]);
   const [cursor, setCursor] = useState(0);
+  const [live, setLive]     = useState(initial);
 
-  const current = stack[cursor];
+  // Whenever the cursor moves (undo/redo) or the stack is replaced, sync live state.
+  useEffect(() => {
+    setLive(stack[cursor]);
+  }, [cursor, stack]);
 
   const push = useCallback((next) => {
+    setLive(next);
     setStack(prev => {
       const trimmed = prev.slice(0, cursor + 1);
-      return [...trimmed, next].slice(-50);
+      const appended = [...trimmed, next];
+      // Cap at 50 entries; if trimmed, also pull cursor down so it stays valid.
+      if (appended.length > 50) {
+        return appended.slice(-50);
+      }
+      return appended;
     });
     setCursor(prev => Math.min(prev + 1, 49));
   }, [cursor]);
 
-  const undo = useCallback(() => {
-    setCursor(c => {
-      const newCursor = Math.max(0, c - 1);
-      return newCursor;
+  // Update live state without committing a history entry. Used for continuous gestures.
+  const replace = useCallback((next) => {
+    setLive(next);
+  }, []);
+
+  // Commit the current live state to the history stack (call on gesture end).
+  const commit = useCallback(() => {
+    setLive(currentLive => {
+      setStack(prev => {
+        if (prev[cursor] === currentLive) return prev;
+        const trimmed = prev.slice(0, cursor + 1);
+        const appended = [...trimmed, currentLive];
+        return appended.length > 50 ? appended.slice(-50) : appended;
+      });
+      setCursor(c => Math.min(c + 1, 49));
+      return currentLive;
     });
+  }, [cursor]);
+
+  const undo = useCallback(() => {
+    setCursor(c => Math.max(0, c - 1));
   }, []);
 
   const redo = useCallback(() => {
-    setCursor(c => {
-      const newCursor = Math.min(stack.length - 1, c + 1);
-      return newCursor;
-    });
+    setCursor(c => Math.min(stack.length - 1, c + 1));
   }, [stack.length]);
 
-  const set = useCallback((next) => {
-    setStack(next);
-    setCursor(next.length - 1);
+  // Hard reset: replace the entire history with a single entry (used on load).
+  const reset = useCallback((next) => {
+    setStack([next]);
+    setCursor(0);
+    setLive(next);
   }, []);
 
-  return { current, push, undo, redo, set, canUndo: cursor > 0, canRedo: cursor < stack.length - 1 };
+  return {
+    current: live,
+    push,
+    replace,
+    commit,
+    undo,
+    redo,
+    reset,
+    canUndo: cursor > 0,
+    canRedo: cursor < stack.length - 1,
+  };
 }
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
@@ -116,7 +154,15 @@ export default function PlayDesigner() {
   const [selectedPathId,   setSelectedPathId]   = useState(null);
   const [drawingPts,       setDrawingPts]       = useState(0);
 
-  const isDirty = savedPlay ? JSON.stringify(play) !== JSON.stringify(savedPlay) : !isNew;
+  // Track the diagram snapshot at the time of last save so we can detect diagram edits.
+  const [savedDiagramJSON, setSavedDiagramJSON] = useState(null);
+  const currentDiagramJSON = useMemo(
+    () => JSON.stringify({ players: diagram.current.players, paths: diagram.current.paths, annotations: diagram.current.annotations }),
+    [diagram.current]
+  );
+  const playMetaDirty = savedPlay ? JSON.stringify(play) !== JSON.stringify(savedPlay) : isNew;
+  const diagramDirty = savedDiagramJSON !== null && savedDiagramJSON !== currentDiagramJSON;
+  const isDirty = isNew ? true : (playMetaDirty || diagramDirty);
 
   // ── Load existing play ──
   useEffect(() => {
@@ -128,15 +174,29 @@ export default function PlayDesigner() {
         setSaved(plays[0]);
         if (plays[0].diagram_data) {
           const { players, paths, annotations } = plays[0].diagram_data;
-          diagram.push({
+          const loaded = {
             players: players || DEFAULT_PLAYERS,
             paths:   paths   || [],
             annotations: annotations || [],
-          });
+          };
+          // Reset history so the loaded diagram is the *only* entry — undoing
+          // after load should not revert to the default formation.
+          diagram.reset(loaded);
+          // Establish a baseline so subsequent diagram edits flip isDirty.
+          setSavedDiagramJSON(JSON.stringify(loaded));
+        } else {
+          // No diagram saved yet on this play — treat the default formation
+          // as the baseline.
+          setSavedDiagramJSON(JSON.stringify({
+            players: DEFAULT_PLAYERS, paths: [], annotations: [],
+          }));
         }
       }
       setLoading(false);
     });
+  // diagram.reset is stable (no deps) so excluding it is safe and matches the
+  // original intent of running this effect only when editId changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editId]);
 
   useEffect(() => {
@@ -179,9 +239,19 @@ export default function PlayDesigner() {
     diagram.push({ ...diag, ...patch });
   }, [diag, diagram]);
 
+  // Continuous drag: update live state without spamming the history stack.
+  // DesignerCanvas calls this on every pointermove during a drag, then calls
+  // onCommitMove on pointerup so we get ONE undo entry per drag.
   const movePlayer = useCallback((id, x, y) => {
-    const updated = diag.players.map(p => p.token_id === id ? { ...p, x, y } : p);
-  }, [diag]);
+    const updated = diag.players.map(p =>
+      p.token_id === id ? { ...p, x, y } : p
+    );
+    diagram.replace({ ...diag, players: updated });
+  }, [diag, diagram]);
+
+  const commitMove = useCallback(() => {
+    diagram.commit();
+  }, [diagram]);
 
   const addPlayer = useCallback((coords) => {
     const newId = `player_${Date.now()}`;
@@ -220,9 +290,24 @@ export default function PlayDesigner() {
       toast.error('Path needs at least 2 points');
       return;
     }
-    updateDiagram({ paths: [...diag.paths, newPath] });
-    toast.success('Route added');
-  }, [diag, updateDiagram]);
+    // Auto-attach the path to the currently selected player so the animation
+    // engine can run the route. If nothing is selected, attach it to the
+    // nearest player to the path's first point (within 60 SVG units).
+    let tokenId = newPath.token_id || selectedPlayerId || null;
+    if (!tokenId && newPath.points.length > 0) {
+      const start = newPath.points[0];
+      let best = null;
+      let bestDist = Infinity;
+      for (const p of diag.players) {
+        const d = Math.hypot(p.x - start.x, p.y - start.y);
+        if (d < bestDist) { bestDist = d; best = p; }
+      }
+      if (best && bestDist <= 60) tokenId = best.token_id;
+    }
+    const finalPath = { ...newPath, token_id: tokenId };
+    updateDiagram({ paths: [...diag.paths, finalPath] });
+    toast.success(tokenId ? 'Route added' : 'Route added (unassigned — select a player first to attach it)');
+  }, [diag, updateDiagram, selectedPlayerId]);
 
   const removePath = useCallback((id) => {
     updateDiagram({ paths: diag.paths.filter(p => p.path_id !== id) });
@@ -259,6 +344,8 @@ export default function PlayDesigner() {
     onSuccess: (saved) => {
       queryClient.invalidateQueries({ queryKey: ['plays'] });
       setSaved({ ...play });
+      // Snapshot diagram at save time so isDirty resets correctly.
+      setSavedDiagramJSON(currentDiagramJSON);
       toast.success(editId ? 'Play saved' : 'Play created');
       if (isNew && saved?.id) navigate(`/play-designer?id=${saved.id}`, { replace: true });
     },
@@ -430,9 +517,13 @@ export default function PlayDesigner() {
             selectedPlayerId={selectedPlayerId}
             selectedPathId={selectedPathId}
             activeTool={activeTool}
+            isAnimating={isAnimating}
+            animationSpeed={animationSpeed}
+            onAnimationEnd={() => setIsAnimating(false)}
             onSelectPlayer={(id) => { setSelectedPlayerId(id); setSelectedPathId(null); }}
             onSelectPath={(id) => { setSelectedPathId(id); setSelectedPlayerId(null); }}
             onMovePlayer={movePlayer}
+            onCommitMove={commitMove}
             onAddPlayer={addPlayer}
             onCommitPath={commitPath}
             onDrawingChange={setDrawingPts}
