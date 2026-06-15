@@ -500,7 +500,7 @@ export default function PlayDesigner() {
       />
 
       {/* Main canvas area with left tool rail and right inspector */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="relative flex-1 flex overflow-hidden">
         <ToolRail
           activeTool={activeTool}
           onSelectTool={setActiveTool}
@@ -509,7 +509,7 @@ export default function PlayDesigner() {
         />
 
         {/* Canvas + bottom bar */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="relative flex-1 flex flex-col overflow-hidden min-w-0">
           <CanvasWorkspace
             players={diag.players}
             paths={diag.paths}

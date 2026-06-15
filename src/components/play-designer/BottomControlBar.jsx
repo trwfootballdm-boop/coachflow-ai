@@ -20,8 +20,8 @@ export default function BottomControlBar({
   const hasAnimation = totalPaths > 0;
 
   return (
-    <div className="absolute bottom-4 left-4 right-4 z-20">
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card/95 px-4 py-2.5 shadow-lg backdrop-blur-xl">
+    <div className="shrink-0 border-t border-border bg-card/95 px-4 py-2 backdrop-blur-xl">
+      <div className="flex items-center justify-between gap-3">
         {/* Left: Animation controls */}
         <div className="flex items-center gap-2">
           <button
