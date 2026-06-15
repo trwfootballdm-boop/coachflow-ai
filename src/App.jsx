@@ -34,6 +34,7 @@ import Terminology from '@/pages/Terminology';
 import Settings from '@/pages/Settings';
 import WeeklyInstallPlanner from '@/pages/WeeklyInstallPlanner';
 import PlayerDashboard from '@/pages/PlayerDashboard';
+import Formations from '@/pages/Formations';
 import Collaboration from '@/pages/Collaboration';
 
 const AuthenticatedApp = () => {
@@ -86,6 +87,7 @@ const AuthenticatedApp = () => {
             <Route path="/terminology" element={<Terminology />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/weekly-install" element={<WeeklyInstallPlanner />} />
+            <Route path="/formations" element={<Formations />} />
             <Route path="/player-dashboard" element={<PlayerDashboard />} />
           </Route>
         </Route>

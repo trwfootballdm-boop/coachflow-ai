@@ -7,16 +7,17 @@ import FormationQuickPanel from './FormationQuickPanel';
 import { SlidersHorizontal, UserRound, NotebookPen, LayoutGrid } from "lucide-react";
 
 const TABS = [
-  { id: 'play', icon: SlidersHorizontal, label: 'Play' },
-  { id: 'formations', icon: LayoutGrid, label: 'Formations' },
-  { id: 'selection', icon: UserRound, label: 'Selection' },
-  { id: 'notes', icon: NotebookPen, label: 'Notes' },
+  { id: 'play',       icon: SlidersHorizontal, label: 'Play' },
+  { id: 'formations', icon: LayoutGrid,        label: 'Formations' },
+  { id: 'selection',  icon: UserRound,         label: 'Selection' },
+  { id: 'notes',      icon: NotebookPen,       label: 'Notes' },
 ];
 
 export default function RightInspector({
   play, onPlayChange,
   selectedPlayer, onPlayerChange, onDuplicatePlayer, onRemovePlayer,
   selectedPath, onPathChange, onRemovePath,
+  onLoadFormation,
   activeTab,
   onTabChange,
 }) {
@@ -36,44 +37,44 @@ export default function RightInspector({
   }, [selectedPlayer, selectedPath]);
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b border-border px-3 py-2">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          Inspector
-        </div>
-        <h3 className="text-xs font-semibold text-foreground mt-0.5">
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header */}
+      <div className="px-3 pt-3 pb-2 border-b border-border/50">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Inspector</p>
+        <h3 className="text-sm font-semibold text-foreground truncate">
           {hasSelection ? selectionLabel : (play?.formation || 'Play Details')}
         </h3>
       </div>
 
-      <div className="grid grid-cols-3 gap-0.5 border-b border-border px-1 py-1">
+      {/* Tab bar */}
+      <div className="flex gap-0.5 px-2 py-1.5 border-b border-border/50">
         {TABS.map((item) => {
           const active = tab === item.id;
+          const Icon = item.icon;
           return (
             <button
               key={item.id}
-              type="button"
               onClick={() => setTab(item.id)}
               className={cn(
-                "inline-flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors",
+                "inline-flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors flex-1",
                 active
                   ? "bg-accent text-accent-foreground"
                   : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
               )}
             >
-              <item.icon className="h-3.5 w-3.5" />
-              <span>{item.label}</span>
+              <Icon className="h-3.5 w-3.5" />
+              {item.label}
             </button>
           );
         })}
       </div>
 
+      {/* Panel content */}
       <div className="flex-1 overflow-y-auto">
         {tab === 'formations' ? (
           <FormationQuickPanel
-            onLoadFormation={(formationId) => {
-              // Handle formation loading logic here
-              console.log('Load formation:', formationId);
+            onLoadFormation={(formation) => {
+              onLoadFormation?.(formation);
             }}
           />
         ) : tab === 'selection' ? (
@@ -91,21 +92,18 @@ export default function RightInspector({
               onRemove={onRemovePath}
             />
           ) : (
-            <div className="flex flex-col items-center px-5 py-12 text-center">
-              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/50 text-muted-foreground">
-                <UserRound className="h-5 w-5" />
-              </div>
+            <div className="px-4 py-8 text-center space-y-1">
               <h3 className="text-sm font-semibold text-foreground">Nothing selected</h3>
-              <p className="mt-2 max-w-[18rem] text-xs leading-5 text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Select a player or path on the field to edit alignment, labels, assignment style, and route details.
               </p>
             </div>
           )
         ) : tab === 'notes' ? (
-          <div className="p-4">
-            <div className="rounded-xl border border-border bg-background/40 p-4 text-sm text-muted-foreground">
+          <div className="px-4 py-4">
+            <p className="text-xs text-muted-foreground">
               Coaching notes, install notes, and version comments can live here.
-            </div>
+            </p>
           </div>
         ) : (
           <PlayMetaPanel play={play} onChange={onPlayChange} />

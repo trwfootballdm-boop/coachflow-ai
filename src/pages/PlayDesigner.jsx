@@ -13,6 +13,7 @@ import CanvasWorkspace       from '@/components/play-designer/CanvasWorkspace';
 import CollapsibleInspector  from '@/components/play-designer/CollapsibleInspector';
 import BottomControlBar      from '@/components/play-designer/BottomControlBar';
 import DesignerStatusBar     from '@/components/play-designer/DesignerStatusBar';
+import SaveFormationDialog   from '@/components/play-designer/SaveFormationDialog';
 import { validateOffensivePlay } from '@/lib/football-engine/validation';
 import { analyzeConcepts } from '@/lib/football-engine/concepts';
 import { analyzeDefensiveReaction } from '@/lib/football-engine/reactions';
@@ -143,6 +144,9 @@ export default function PlayDesigner() {
 
   // ── AI panel state ──
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
+
+  // ── Formation dialog state ──
+  const [saveFormationOpen, setSaveFormationOpen] = useState(false);
 
   // ── Animation state ──
   const [isAnimating, setIsAnimating] = useState(false);
@@ -497,6 +501,8 @@ export default function PlayDesigner() {
         onToggleFav={() => setPlay(p => ({ ...p, is_favorite: !p.is_favorite }))}
         onDelete={handleDelete}
         onAICreate={() => setAiPanelOpen(true)}
+        onSaveAsFormation={() => setSaveFormationOpen(true)}
+        onOpenFormationLibrary={() => navigate('/formations')}
       />
 
       {/* Main canvas area with left tool rail and right inspector */}
@@ -557,8 +563,22 @@ export default function PlayDesigner() {
           selectedPath={selectedPath}
           onPathChange={updatePath}
           onRemovePath={() => removePath(selectedPathId)}
+          onLoadFormation={(formation) => {
+            if (formation?.players) {
+              diagram.push({ ...diag, players: formation.players });
+              toast.success(`Loaded "${formation.formation_name}"`);
+            }
+          }}
         />
       </div>
+
+      {/* Save Formation dialog */}
+      <SaveFormationDialog
+        open={saveFormationOpen}
+        onOpenChange={setSaveFormationOpen}
+        diagram={diag}
+        defaultName={play.formation || play.name || ''}
+      />
 
       {/* Status bar */}
       <DesignerStatusBar

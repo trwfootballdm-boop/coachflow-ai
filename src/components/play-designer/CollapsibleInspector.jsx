@@ -13,13 +13,11 @@ export default function CollapsibleInspector({
   selectedPath,
   onPathChange,
   onRemovePath,
+  onLoadFormation,
 }) {
-  // Closed by default — the field gets all the space until the user opens it
-  // or selects something on the canvas.
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [activeTab, setActiveTab] = useState('play');
 
-  // Auto-open and switch to the selection tab when the user picks something.
   useEffect(() => {
     if (selectedPlayer || selectedPath) {
       setActiveTab('selection');
@@ -29,8 +27,7 @@ export default function CollapsibleInspector({
 
   return (
     <>
-      {/* Floating toggle pinned to the right edge. Always visible regardless of
-          collapsed state so the user can summon the inspector with one click. */}
+      {/* Floating toggle */}
       <button
         onClick={() => setIsCollapsed(c => !c)}
         aria-label={isCollapsed ? 'Open inspector' : 'Close inspector'}
@@ -43,37 +40,34 @@ export default function CollapsibleInspector({
         {isCollapsed ? (
           <>
             <PanelRight className="h-3.5 w-3.5" />
-            <span>Inspector</span>
+            Inspector
           </>
         ) : (
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-3.5 w-3.5" />
         )}
       </button>
 
-      {/* Sliding inspector panel */}
+      {/* Sliding panel */}
       <div
         className={cn(
-          "relative h-full border-l border-border bg-card overflow-hidden transition-[width] duration-300 ease-in-out",
-          isCollapsed ? "w-0" : "w-80"
+          "shrink-0 w-80 border-l border-border bg-card overflow-hidden transition-all duration-300",
+          isCollapsed ? "w-0 border-0" : "w-80"
         )}
       >
-        {/* Keep RightInspector mounted (just hidden) so it doesn't lose its tab
-            state every time the user toggles. */}
-        <div className={cn("h-full w-80", isCollapsed && "invisible")}>
-          <RightInspector
-            play={play}
-            onPlayChange={onPlayChange}
-            selectedPlayer={selectedPlayer}
-            onPlayerChange={onPlayerChange}
-            onDuplicatePlayer={onDuplicatePlayer}
-            onRemovePlayer={onRemovePlayer}
-            selectedPath={selectedPath}
-            onPathChange={onPathChange}
-            onRemovePath={onRemovePath}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-          />
-        </div>
+        <RightInspector
+          play={play}
+          onPlayChange={onPlayChange}
+          selectedPlayer={selectedPlayer}
+          onPlayerChange={onPlayerChange}
+          onDuplicatePlayer={onDuplicatePlayer}
+          onRemovePlayer={onRemovePlayer}
+          selectedPath={selectedPath}
+          onPathChange={onPathChange}
+          onRemovePath={onRemovePath}
+          onLoadFormation={onLoadFormation}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
       </div>
     </>
   );
