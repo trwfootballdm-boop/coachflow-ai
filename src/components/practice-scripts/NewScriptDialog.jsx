@@ -35,8 +35,11 @@ export default function NewScriptDialog({ open, onClose, teamId, onCreated }) {
   });
 
   const selectPreset = (preset) => {
-    u('practice_day', preset.value);
-    if (!form.title) u('title', preset.label);
+    setForm(f => ({
+      ...f,
+      practice_day: preset.value,
+      title: f.title || preset.label,
+    }));
   };
 
   return (
