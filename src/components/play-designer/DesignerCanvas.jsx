@@ -409,13 +409,17 @@ export default function DesignerCanvas({
         )}
       </div>
 
-      <div className="flex h-full items-center justify-center p-5 md:p-6">
+      <div className="relative flex h-full w-full items-center justify-center p-3 md:p-4">
         <div
-          className="relative aspect-[5/3] w-full max-w-[1240px] overflow-hidden rounded-[28px] border shadow-2xl"
+          className="relative overflow-hidden rounded-[20px] border shadow-2xl"
           style={{
             borderColor: FIELD_THEME.boardBorder,
             background: FIELD_THEME.board,
-            boxShadow: "0 24px 80px rgba(0,0,0,0.42)",
+            boxShadow: "0 18px 60px rgba(0,0,0,0.42)",
+            aspectRatio: `${F.width} / ${F.height}`,
+            height: '100%',
+            width: 'auto',
+            maxWidth: '100%',
           }}
         >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_35%)]" />
