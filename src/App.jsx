@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/toaster"
+import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
@@ -71,6 +72,7 @@ const AuthenticatedApp = () => {
         <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
           <Route element={<AppLayout />}>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/collaboration" element={<Collaboration />} />
             <Route path="/play-designer" element={<PlayDesigner />} />
             <Route path="/play-library" element={<PlayLibrary />} />
             <Route path="/library-browser" element={<PlayLibraryBrowser />} />
@@ -85,7 +87,6 @@ const AuthenticatedApp = () => {
             <Route path="/settings" element={<Settings />} />
             <Route path="/weekly-install" element={<WeeklyInstallPlanner />} />
             <Route path="/player-dashboard" element={<PlayerDashboard />} />
-            <Route path="/collaboration" element={<Collaboration />} />
           </Route>
         </Route>
 
@@ -103,6 +104,7 @@ function App() {
           <AuthenticatedApp />
         </Router>
         <Toaster />
+        <SonnerToaster />
       </QueryClientProvider>
     </AuthProvider>
   )
